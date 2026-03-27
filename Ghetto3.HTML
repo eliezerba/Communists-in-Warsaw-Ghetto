@@ -1,0 +1,2183 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Communists in Warsaw Ghetto - מעבדת אליהו</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Reliable CDNs for Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Rubik', sans-serif; background-color: #f3f4f6; }
+        .tab-active { border-bottom: 2px solid #2563eb; color: #2563eb; font-weight: 600; }
+        .node { stroke: #fff; stroke-width: 1.5px; cursor: pointer; transition: stroke-width 0.2s; }
+        .node:hover { stroke: #1e293b; stroke-width: 3px; }
+        .link { stroke: #cbd5e1; stroke-opacity: 0.6; }
+        .node-label { font-size: 10px; font-family: 'Rubik'; pointer-events: none; fill: #333; text-shadow: 1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff; }
+        #tooltip { position: absolute; opacity: 0; background: rgba(255, 255, 255, 0.95); border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; pointer-events: none; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); font-size: 0.875rem; z-index: 100; min-width: 250px; max-width: 300px; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .feature-cb { accent-color: #9333ea; width: 1.1rem; height: 1.1rem; cursor: pointer; }
+        .heatmap-cell { transition: opacity 0.2s; cursor: pointer; }
+        .heatmap-cell:hover { opacity: 0.8; stroke: #000; stroke-width: 1px; }
+        #locations-map { min-height: 420px; }
+        .leaflet-container { font-family: 'Rubik', sans-serif; }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden text-slate-800 transition-all duration-300">
+
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b border-slate-200 z-10 shrink-0">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <i data-lucide="network" class="text-blue-600 w-6 h-6"></i>
+                <h1 class="text-xl font-bold text-slate-900" data-i18n="app_title">Communists in Warsaw Ghetto - מעבדת אליהו</h1>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="text-sm text-slate-500 bg-slate-100 px-3 py-1 rounded-md flex items-center gap-2 border border-slate-200">
+                    <span id="data-status-icon" class="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
+                    <span id="data-status-text" class="font-medium" data-i18n="waiting_data">ממתין לנתונים...</span>
+                </div>
+                <button id="lang-toggle" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded text-sm font-medium transition flex items-center gap-2">
+                    <i data-lucide="globe" class="w-4 h-4"></i> <span id="lang-label">English</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col h-full overflow-hidden bg-slate-50">
+        <!-- Tabs & Upload Area -->
+        <div class="bg-white border-b border-slate-200 shrink-0">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div id="loader-section" class="py-4 border-b border-slate-100 flex flex-wrap gap-4 items-end">
+                    <div class="w-full">
+                        <label class="block text-sm font-medium text-slate-700 mb-1" data-i18n="load_excel">טען קובץ נתונים מרוכז (Excel - .xlsx)</label>
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-2 items-center">
+                            <div>
+                                <input type="file" id="file-excel" accept=".xlsx, .xls" class="hidden">
+                                <label for="file-excel" id="btn-choose-excel" class="w-full h-10 bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium rounded-md border border-blue-200 transition-colors flex items-center justify-center gap-2 cursor-pointer">
+                                    <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> <span data-i18n="btn_choose_excel">בחר קובץ אקסל</span>
+                                </label>
+                            </div>
+                            <div>
+                                <input type="url" id="drive-url" placeholder="https://drive.google.com/file/d/.../view" class="w-full h-10 border border-slate-300 rounded-md px-3 text-sm bg-white truncate" dir="ltr">
+                            </div>
+                            <div>
+                                <button id="btn-load-drive" class="w-full h-10 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-md transition-colors shadow-sm flex items-center justify-center gap-2 opacity-50 cursor-not-allowed" disabled>
+                                    <i data-lucide="cloud-download" class="w-4 h-4"></i> <span data-i18n="btn_load_drive">טען מ-Drive</span>
+                                </button>
+                            </div>
+                            <div>
+                                <button id="btn-process" class="w-full h-10 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md transition-colors shadow-sm flex items-center justify-center gap-2 opacity-50 cursor-not-allowed" disabled>
+                                    <i data-lucide="cpu" class="w-4 h-4"></i> <span data-i18n="btn_process">עבד וחשב מדדים</span>
+                                </button>
+                            </div>
+                        </div>
+                        <p id="selected-file-name" class="text-xs text-slate-500 mt-1 truncate">לא נבחר קובץ</p>
+                        <p class="text-xs text-slate-500 mt-1"><i data-lucide="shield-check" class="w-3 h-3 inline"></i> <span data-i18n="load_drive_info">הקישור חייב להיות פתוח ל-Anyone with the link (Viewer).</span></p>
+                        <p class="text-xs text-slate-500 mt-1.5"><i data-lucide="info" class="w-3 h-3 inline"></i> <span data-i18n="load_info">טוען גיליון 1 (רשת פנימית) וגיליון 2 (רשת חיצונית).</span></p>
+                    </div>
+                </div>
+
+                <div class="flex gap-6 mt-2 overflow-x-auto" id="tabs-nav">
+                    <button class="tab-btn tab-active pb-3 px-1 whitespace-nowrap text-sm font-medium transition-colors" data-target="tab-stats" data-i18n="tab_1">
+                        1. משקולות מטרה
+                    </button>
+                    <button class="tab-btn text-slate-500 hover:text-slate-700 pb-3 px-1 whitespace-nowrap text-sm font-medium transition-colors" data-target="tab-network" data-i18n="tab_2">
+                        2. מדדי רשת ומיפוי
+                    </button>
+                    <button class="tab-btn text-slate-500 hover:text-slate-700 pb-3 px-1 whitespace-nowrap text-sm font-medium transition-colors" data-target="tab-integrated" data-i18n="tab_3">
+                        3. אינטגרציה וחיזוי חוסרים
+                    </button>
+                    <button class="tab-btn text-slate-500 hover:text-slate-700 pb-3 px-1 whitespace-nowrap text-sm font-medium transition-colors" data-target="tab-matrix">
+                        <i data-lucide="grid" class="w-4 h-4 inline me-1"></i><span data-i18n="tab_4">4. מכלול נתונים ומתאמים</span>
+                    </button>
+                    <button class="tab-btn text-slate-500 hover:text-slate-700 pb-3 px-1 whitespace-nowrap text-sm font-medium transition-colors" data-target="tab-locations">
+                        <i data-lucide="map-pin" class="w-4 h-4 inline me-1"></i><span data-i18n="tab_5">5. מיקומים</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabs Content Container -->
+        <div class="flex-1 overflow-auto p-4 sm:p-6 lg:p-8 relative">
+            <div id="tooltip" dir="ltr"></div>
+
+            <!-- TAB 1: Statistical Analysis -->
+            <div id="tab-stats" class="tab-content h-full flex flex-col lg:flex-row gap-6">
+                <!-- Sidebar: Variable Weights -->
+                <div class="lg:w-1/3 bg-white p-5 rounded-lg border border-slate-200 shadow-sm flex flex-col">
+                    <h2 class="text-lg font-semibold mb-2 flex items-center gap-2">
+                        <i data-lucide="scale" class="w-5 h-5 text-purple-500"></i> 
+                        <span data-i18n="opt_target">אופטימיזציה למשתנה יעד</span>
+                        <button class="info-btn text-slate-400 hover:text-blue-600 transition ms-auto" data-term="cramers"><i data-lucide="info" class="w-4 h-4"></i></button>
+                    </h2>
+                    <p class="text-xs text-slate-500 mb-3" data-i18n="opt_desc">בחר משתנה יעד ובדוק אילו נתוני רקע מנבאים אותו בצורה הטובה ביותר.</p>
+                    
+                    <label class="block text-sm font-bold text-slate-700 mb-1" data-i18n="target_var">משתנה יעד לבדיקה:</label>
+                    <select id="stat-target-var" class="w-full border border-slate-300 rounded-md p-1.5 text-sm bg-slate-50 mb-3 shadow-sm"></select>
+                    
+                    <label class="block text-sm font-bold text-slate-700 mb-1" data-i18n="bg_vars">נתוני רקע להשוואה מולו:</label>
+                    <div id="features-container" class="bg-slate-50 border border-slate-200 rounded p-3 mb-4 max-h-40 overflow-y-auto text-sm space-y-2 shadow-inner"></div>
+
+                    <button id="btn-calc-weights" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 rounded transition-colors text-sm mb-4 shadow-sm flex items-center justify-center gap-2">
+                        <i data-lucide="calculator" class="w-4 h-4"></i> <span data-i18n="btn_calc_weights">חשב משקולות ניבוי</span>
+                    </button>
+
+                    <div id="weights-results" class="flex-1 overflow-auto hidden bg-purple-50/50 p-3 rounded border border-purple-100">
+                        <h3 class="text-sm font-bold text-purple-900 mb-2 border-b border-purple-200 pb-1" data-i18n="pred_results">תוצאות מדד הניבוי (0 עד 1):</h3>
+                        <ul id="weights-list" class="space-y-3 mt-2"></ul>
+                    </div>
+                </div>
+
+                <!-- Main area: Cross Tabulation -->
+                <div class="lg:w-2/3 bg-white p-5 rounded-lg border border-slate-200 shadow-sm flex flex-col">
+                    <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                        <i data-lucide="bar-chart-2" class="w-5 h-5 text-blue-500"></i> <span data-i18n="cross_tab">צלילה ידנית - הצלבת נתונים</span>
+                    </h2>
+                    
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 mb-1" data-i18n="axis_x">ציר X (משתנה מסביר)</label>
+                            <select id="stat-var-x" class="w-full border border-slate-300 rounded p-1.5 text-sm"></select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 mb-1" data-i18n="axis_y">ציר Y (התפלגות תצפיות)</label>
+                            <select id="stat-var-y" class="w-full border border-slate-300 rounded p-1.5 text-sm"></select>
+                        </div>
+                    </div>
+                    <div class="relative flex-1 w-full h-full min-h-[300px]" dir="ltr">
+                        <canvas id="statsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: Network Analysis -->
+            <div id="tab-network" class="tab-content h-full hidden flex flex-col gap-4">
+                <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 h-full">
+                    
+                    <!-- Network Sidebar -->
+                    <div class="lg:col-span-1 flex flex-col gap-4 overflow-y-auto">
+                        <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+                            <h2 class="text-lg font-semibold mb-3 flex items-center gap-2">
+                                <i data-lucide="settings" class="w-5 h-5 text-indigo-500"></i> <span data-i18n="net_algos">אלגוריתמי רשת</span>
+                            </h2>
+                            
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1" data-i18n="node_size">גודל צומת (מרכזיות):</label>
+                                    <select id="net-size-by" class="w-full border border-slate-300 rounded-md p-1.5 text-sm bg-slate-50">
+                                        <option value="degree">Degree (Direct Connections)</option>
+                                        <option value="betweenness">Betweenness (Bottlenecks)</option>
+                                        <option value="pagerank">PageRank (Influence)</option>
+                                        <option value="uniform" data-i18n="opt_uniform">אחיד (ללא משקל)</option>
+                                    </select>
+                                    <div class="flex gap-2 mt-2">
+                                        <button class="info-btn text-xs bg-slate-100 hover:bg-blue-100 text-slate-600 px-2 py-1 rounded transition" data-term="degree">Degree</button>
+                                        <button class="info-btn text-xs bg-slate-100 hover:bg-blue-100 text-slate-600 px-2 py-1 rounded transition" data-term="betweenness">Betweenness</button>
+                                        <button class="info-btn text-xs bg-slate-100 hover:bg-blue-100 text-slate-600 px-2 py-1 rounded transition" data-term="pagerank">PageRank</button>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <div class="flex items-center gap-2 mb-1 mt-4">
+                                        <label class="block text-sm font-medium text-slate-700" data-i18n="node_color">צבע צומת (קיבוץ):</label>
+                                        <button class="info-btn text-xs bg-slate-100 hover:bg-blue-100 text-slate-600 px-1.5 py-0.5 rounded transition" title="בחירת מדד קיבוץ: קהילות (דגם פיתופיזי), K-Core (גרעין), או תכונות סטטיות"><i data-lucide="help-circle" class="w-3 h-3"></i></button>
+                                    </div>
+                                    <select id="net-color-by" class="w-full border border-slate-300 rounded-md p-1.5 text-sm bg-slate-50">
+                                        <option value="community">Communities (Clusters) - קהילות</option>
+                                        <option value="kcore">K-Core (Network Core) - גרעין רשת</option>
+                                    </select>
+                                    <div class="flex gap-2 mt-2">
+                                        <button class="info-btn text-xs bg-slate-100 hover:bg-blue-100 text-slate-600 px-2 py-1 rounded transition" data-term="community">Communities</button>
+                                        <button class="info-btn text-xs bg-slate-100 hover:bg-blue-100 text-slate-600 px-2 py-1 rounded transition" data-term="kcore">K-Core</button>
+                                    </div>
+                                    
+                                    <!-- I: קהילות - מודל Label Propagation המדברק צמתים לקבוצות על בסיס טופולוגיית הרשת (קשרים בין אדםים) -->
+                                    <div id="communities-subsection" class="hidden mt-4 p-3 bg-rose-50 border border-rose-200 rounded">
+                                        <h4 class="text-xs font-bold text-rose-900 mb-2 flex items-center gap-1">
+                                            <i data-lucide="users" class="w-4 h-4 text-rose-600"></i>
+                                            פרופיל קהילות (כשבוחרים Communities)
+                                            <button class="ml-auto text-xs text-rose-600 hover:text-rose-800 transition" title="I: מספר קהילות (K) - כמה קבוצות לעקוב. מינ=2, מקס=20. L במודל Label Propagation: כל צומת מקבל תוויות מן השכנים. Iterate 15 פעמים להתכנסות"><i data-lucide="info" class="w-3.5 h-3.5"></i></button>
+                                        </h4>
+                                        <div class="space-y-2">
+                                            <div>
+                                                <label class="block text-xs font-medium text-rose-900 mb-1">מספר קהילות (K):</label>
+                                                <div class="flex gap-2 items-center">
+                                                    <input type="number" id="community-count-slider" min="2" max="20" value="5" class="flex-1 border border-rose-300 rounded px-2 py-1.5 text-xs">
+                                                    <button id="btn-recalc-communities" class="text-xs bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded transition font-medium">עדכן</button>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs font-medium text-rose-900 mb-1">צבעי קהילות לפי קריטריון:</label>
+                                                <select id="community-attr-selector" class="w-full border border-rose-300 rounded p-1.5 text-xs bg-white mb-2">
+                                                    <option value="community">קהילות (ברירת מחדל)</option>
+                                                </select>
+                                                <button id="btn-apply-community-attr" class="w-full text-xs bg-rose-600 hover:bg-rose-700 text-white px-2 py-1.5 rounded transition font-medium">עדכן צביעה</button>
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs font-medium text-rose-900 mb-1">בחר קהילה לתצוגת פרטים:</label>
+                                                <select id="community-selector" class="w-full border border-rose-300 rounded p-1.5 text-xs bg-white">
+                                                    <option value="">בחר קהילה...</option>
+                                                </select>
+                                            </div>
+                                            <div id="community-profile" class="text-xs text-rose-800 bg-white rounded p-2 max-h-[250px] overflow-y-auto hidden border border-rose-200">
+                                                <p class="text-rose-600 text-center py-2">בחר קהילה כדי לראות רכבי אנשים ודגמי סיבה/תוצאה</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex-1 flex flex-col">
+                            <h3 class="text-sm font-medium text-slate-800 mb-2" id="leaderboard-title">מובילי מדד נבחר</h3>
+                            <div class="bg-slate-50 rounded border border-slate-200 p-2 flex-1 overflow-y-auto min-h-[150px]">
+                                <ul id="top-nodes-list" class="text-sm space-y-1"></ul>
+                            </div>
+                        </div>
+
+
+                    </div>
+
+                    <!-- Network Canvas -->
+                    <div class="lg:col-span-3 bg-white rounded-lg border border-slate-200 shadow-sm relative overflow-hidden flex flex-col">
+                        <div class="absolute top-4 start-4 z-10 bg-white/95 p-3 rounded shadow-sm border border-slate-200 max-w-xs">
+                            <h4 class="text-xs font-bold text-slate-700 mb-1" data-i18n="legend_colors">מקרא צבעים</h4>
+                            <div id="network-legend" class="text-xs space-y-1.5 max-h-32 overflow-y-auto mb-2 border-b border-slate-200 pb-2"></div>
+                            
+                            <h4 class="text-xs font-bold text-slate-700 mb-1 mt-2" data-i18n="legend_shape">סוג רשת (Shape)</h4>
+                            <div class="text-xs space-y-2">
+                                <div class="flex items-center gap-2">
+                                    <svg width="12" height="12"><circle cx="6" cy="6" r="5" fill="#64748b" stroke="#fff" stroke-width="1"/></svg> 
+                                    <span class="font-medium text-blue-800" data-i18n="internal_net">פנימית (גיבורים)</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <svg width="12" height="12"><rect x="1" y="1" width="10" height="10" fill="#64748b" stroke="#fff" stroke-width="1"/></svg> 
+                                    <span class="font-medium text-rose-800" data-i18n="external_net">חיצונית (אנשי קשר)</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="network-container" class="w-full h-full min-h-[500px] cursor-move flex items-center justify-center bg-slate-50/30"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: Integrated & Graph ML -->
+            <div id="tab-integrated" class="tab-content h-full hidden flex flex-col gap-4">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 shrink-0">
+                    <!-- Homophily -->
+                    <div class="bg-indigo-900 text-white p-5 rounded-lg shadow-md flex flex-col">
+                        <h2 class="text-lg font-bold mb-2 flex items-center gap-2">
+                            <i data-lucide="users" class="w-5 h-5 text-indigo-300"></i> <span data-i18n="homophily_title">מדד הומופיליה (Homophily)</span>
+                            <button class="info-btn text-indigo-400 hover:text-white transition ms-auto" data-term="homophily"><i data-lucide="info" class="w-4 h-4"></i></button>
+                        </h2>
+                        <p class="text-indigo-200 text-xs mb-4" data-i18n="homophily_desc">"דומה מושך דומה": בודק האם קשרים נוטים להיווצר בין אנשים בעלי רקע זהה.</p>
+                        <div class="flex items-end gap-2 mt-auto">
+                            <div class="flex-1">
+                                <label class="block text-xs text-indigo-300 mb-1" data-i18n="homophily_var">בדוק נטייה קהילתית לפי:</label>
+                                <select id="homophily-var" class="w-full bg-indigo-800 border-indigo-700 text-sm rounded p-1.5"></select>
+                            </div>
+                            <button id="btn-calc-homophily" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-1.5 rounded text-sm transition" data-i18n="btn_calc">חשב</button>
+                        </div>
+                        <div id="homophily-result" class="mt-3 text-sm font-medium p-2 bg-indigo-950/50 rounded hidden"></div>
+                    </div>
+
+                    <!-- Link Prediction -->
+                    <div class="bg-teal-900 text-white p-5 rounded-lg shadow-md flex flex-col">
+                        <h2 class="text-lg font-bold mb-2 flex items-center gap-2">
+                            <i data-lucide="search" class="w-5 h-5 text-teal-300"></i> <span data-i18n="link_pred_title">חיזוי קשרים חסרים</span>
+                            <button class="info-btn text-teal-400 hover:text-white transition ms-auto" data-term="link_prediction"><i data-lucide="info" class="w-4 h-4"></i></button>
+                        </h2>
+                        <p class="text-teal-200 text-xs mb-4" data-i18n="link_pred_desc">אלגוריתם הסורק חברים משותפים בגרף להצעת קשרים היסטוריים שלא תועדו במפורש.</p>
+                        <button id="btn-predict-links" class="mt-auto bg-teal-700 hover:bg-teal-600 w-full text-white px-4 py-2 rounded text-sm transition" data-i18n="btn_predict">הרץ אלגוריתם חיזוי</button>
+                    </div>
+                </div>
+
+                <div id="link-prediction-results" class="bg-white border border-teal-200 rounded-lg p-4 shadow-sm hidden shrink-0">
+                    <h3 class="text-sm font-bold text-teal-800 mb-2" data-i18n="top_predictions">5 הקשרים הסמויים הסבירים ביותר:</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-5 gap-2" id="prediction-cards"></div>
+                </div>
+
+                <!-- Export Table -->
+                <div class="bg-white rounded-lg border border-slate-200 shadow-sm flex-1 flex flex-col overflow-hidden">
+                    <div class="p-3 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+                        <h3 class="text-sm font-bold text-slate-800" data-i18n="export_title">Graph ML Dataset (מוכן לייצוא ל-XGBoost)</h3>
+                        <button id="btn-export" class="text-sm bg-green-600 hover:bg-green-700 text-white py-1 px-3 rounded transition-colors flex items-center gap-1.5">
+                            <i data-lucide="download" class="w-4 h-4"></i> <span data-i18n="btn_export">ייצא ל-CSV</span>
+                        </button>
+                    </div>
+                    <div class="flex-1 overflow-auto p-0" dir="ltr">
+                        <table class="w-full text-xs text-start">
+                            <thead class="text-slate-700 uppercase bg-slate-100 sticky top-0 shadow-sm text-start">
+                                <tr>
+                                    <th class="px-3 py-2 text-start">ID</th>
+                                    <th class="px-3 py-2 text-start">Name</th>
+                                    <th class="px-3 py-2 bg-blue-50 text-start">Degree</th>
+                                    <th class="px-3 py-2 bg-purple-50 text-start">Betweenness</th>
+                                    <th class="px-3 py-2 bg-orange-50 text-start">PageRank</th>
+                                    <th class="px-3 py-2 bg-teal-50 text-start">K-Core</th>
+                                    <th class="px-3 py-2 bg-rose-50 text-start">Community ID</th>
+                                </tr>
+                            </thead>
+                            <tbody id="integration-table-body" class="divide-y divide-slate-200 text-slate-600">
+                                <tr><td colspan="7" class="text-center py-8 text-slate-400" data-i18n="load_data_first">טען נתונים תחילה</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 4: Correlation Matrix & Overview -->
+            <div id="tab-matrix" class="tab-content h-full hidden flex flex-col lg:flex-row gap-6">
+                <!-- Insights Panel -->
+                <div class="lg:w-1/3 bg-white p-5 rounded-lg border border-slate-200 shadow-sm flex flex-col">
+                    <h2 class="text-xl font-bold mb-2 flex items-center gap-2 text-slate-800">
+                        <i data-lucide="lightbulb" class="w-6 h-6 text-amber-500"></i> <span data-i18n="insights_title">המלצות אלגוריתמיות</span>
+                    </h2>
+                    <p class="text-sm text-slate-600 mb-6" data-i18n="insights_desc">המערכת סרקה את כל מכלול משתני הרקע והפעילות, ומציעה את הקשרים הסטטיסטיים החזקים ביותר שנמצאו.</p>
+                    
+                    <div class="flex-1 flex flex-col gap-4" id="auto-insights-container">
+                        <div class="text-center py-10 text-slate-400 italic" data-i18n="processing">המערכת מעבדת את הנתונים...</div>
+                    </div>
+                </div>
+
+                <!-- Heatmap Panel -->
+                <div class="lg:w-2/3 bg-white p-5 rounded-lg border border-slate-200 shadow-sm flex flex-col relative">
+                    <h2 class="text-lg font-semibold mb-2 flex items-center gap-2 text-slate-800">
+                        <i data-lucide="grid" class="w-5 h-5 text-blue-500"></i> <span data-i18n="heatmap_title">מפת חום (Correlation Heatmap)</span>
+                    </h2>
+                    <p class="text-xs text-slate-500 mb-4 border-b border-slate-100 pb-2" data-i18n="heatmap_desc">מציג את עוצמת המתאם (Cramér's V) בין כל זוגות המשתנים המרכזיים. ככל שהצבע כחול וכהה יותר - הקשר חזק יותר.</p>
+                    <div class="flex-1 relative" id="heatmap-container" dir="ltr"></div>
+                    <div id="heatmap-tooltip" class="absolute opacity-0 bg-slate-800 text-white text-xs px-3 py-2 rounded pointer-events-none shadow-lg z-50 transition-opacity" dir="ltr"></div>
+                </div>
+            </div>
+
+            <!-- TAB 5: Locations -->
+            <div id="tab-locations" class="tab-content h-full hidden flex flex-col gap-4">
+                <div class="bg-white rounded-lg border border-slate-200 shadow-sm p-4">
+                    <h2 class="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                        <i data-lucide="map" class="w-5 h-5 text-emerald-600"></i>
+                        <span data-i18n="locations_title">מיקומים מתוך גיליון Locations</span>
+                    </h2>
+                    <p class="text-xs text-slate-500 mt-1" data-i18n="locations_desc">מוצגים רק מקומות שעברו סטנדרטיזציה (עמודה C) ויש להם קו רוחב/אורך (עמודות H,I).</p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-5 gap-4 flex-1 min-h-0">
+                    <div class="lg:col-span-3 bg-white rounded-lg border border-slate-200 shadow-sm p-3 flex flex-col min-h-[300px]">
+                        <h3 class="text-sm font-semibold text-slate-700 mb-2" data-i18n="locations_map_title">מפה</h3>
+                        <div id="locations-map" class="w-full h-full rounded border border-slate-200 bg-slate-50"></div>
+                    </div>
+
+                    <div class="lg:col-span-2 bg-white rounded-lg border border-slate-200 shadow-sm p-3 flex flex-col min-h-[300px]">
+                        <h3 class="text-sm font-semibold text-slate-700 mb-2" data-i18n="locations_table_title">טבלת מיקומים</h3>
+                        <div class="overflow-auto flex-1" dir="ltr">
+                            <table class="w-full text-xs text-start">
+                                <thead class="sticky top-0 bg-slate-100 text-slate-700 uppercase">
+                                    <tr>
+                                        <th class="px-2 py-2 text-start" data-i18n="locations_col_place">Place (A)</th>
+                                        <th class="px-2 py-2 text-start" data-i18n="locations_col_std">Standardized (C)</th>
+                                        <th class="px-2 py-2 text-start">Lat</th>
+                                        <th class="px-2 py-2 text-start">Lon</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="locations-table-body" class="divide-y divide-slate-200 text-slate-600">
+                                    <tr><td colspan="4" class="text-center py-8 text-slate-400" data-i18n="load_data_first">טען נתונים תחילה</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Global Info Modal -->
+    <div id="info-modal" class="hidden fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
+        <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 relative border border-slate-200">
+            <button id="close-info-modal" class="absolute top-4 end-4 text-slate-400 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-full p-1 transition"><i data-lucide="x" class="w-5 h-5"></i></button>
+            <div class="flex items-center gap-3 mb-3 border-b border-slate-100 pb-3">
+                <div class="bg-blue-100 p-2 rounded-full text-blue-600"><i data-lucide="book-open" class="w-6 h-6"></i></div>
+                <h3 id="info-modal-title" class="text-xl font-bold text-slate-900"></h3>
+            </div>
+            <p id="info-modal-desc" class="text-slate-700 text-sm leading-relaxed whitespace-pre-line"></p>
+        </div>
+    </div>
+
+    <!-- Protagonist Details Modal -->
+    <div id="person-modal" class="hidden fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
+        <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full p-6 relative border border-slate-200 max-h-[85vh] overflow-auto">
+            <button id="close-person-modal" class="absolute top-4 end-4 text-slate-400 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-full p-1 transition"><i data-lucide="x" class="w-5 h-5"></i></button>
+            <div class="flex items-center gap-3 mb-3 border-b border-slate-100 pb-3">
+                <div class="bg-emerald-100 p-2 rounded-full text-emerald-700"><i data-lucide="user-search" class="w-6 h-6"></i></div>
+                <h3 id="person-modal-title" class="text-xl font-bold text-slate-900"></h3>
+            </div>
+            <div id="person-modal-body" class="text-sm text-slate-700 leading-relaxed"></div>
+        </div>
+    </div>
+
+    <script>
+        // --- Translations & i18n Dictionary ---
+        const i18n = {
+            he: {
+                app_title: "Communists in Warsaw Ghetto - מעבדת אליהו",
+                waiting_data: "ממתין לנתונים...",
+                load_excel: "טען קובץ נתונים מרוכז (Excel - .xlsx)",
+                load_info: "טוען גיליון 1 (רשת פנימית) וגיליון 2 (רשת חיצונית).",
+                load_drive: "או טען קובץ מלינק Google Drive (.xlsx)",
+                load_drive_info: "הקישור חייב להיות פתוח ל-Anyone with the link (Viewer).",
+                btn_load_drive: "טען מ-Drive",
+                btn_choose_excel: "בחר קובץ אקסל",
+                no_file_selected: "לא נבחר קובץ",
+                btn_process: "עבד וחשב מדדים",
+                tab_1: "1. משקולות מטרה",
+                tab_2: "2. מדדי רשת ומיפוי",
+                tab_3: "3. אינטגרציה וחיזוי חוסרים",
+                tab_4: "4. מכלול נתונים ומתאמים",
+                tab_5: "5. מיקומים",
+                locations_title: "מיקומים מתוך גיליון Locations",
+                locations_desc: "מוצגים רק מקומות שעברו סטנדרטיזציה (עמודה C) ויש להם קו רוחב/אורך (עמודות H,I).",
+                locations_map_title: "מפה",
+                locations_table_title: "טבלת מיקומים",
+                locations_col_place: "שם מקום (A)",
+                locations_col_std: "מיקום סטנדרטי (C)",
+                opt_target: "אופטימיזציה למשתנה יעד",
+                opt_desc: "בחר משתנה יעד ובדוק אילו נתוני רקע מנבאים אותו בצורה הטובה ביותר.",
+                target_var: "משתנה יעד לבדיקה:",
+                opt_zob: "חברות באי\"ל (ŻOB)",
+                opt_aryan: "מעבר לצד הארי",
+                opt_gl: "חברות במחתרת הפולנית",
+                bg_vars: "נתוני רקע להשוואה מולו:",
+                opt_gender: "מגדר (Gender)",
+                opt_edu: "רמת השכלה",
+                opt_affil: "שיוך פוליטי קודם",
+                opt_cat: "קטגוריית רקע",
+                opt_socio: "רקע כלכלי",
+                opt_cult: "נטייה תרבותית משפחתית",
+                btn_calc_weights: "חשב משקולות ניבוי",
+                pred_results: "תוצאות מדד הניבוי (0 עד 1):",
+                cross_tab: "צלילה ידנית - הצלבת נתונים",
+                axis_x: "ציר X (משתנה מסביר)",
+                axis_y: "ציר Y (התפלגות תצפיות)",
+                net_algos: "אלגוריתמי רשת",
+                node_size: "גודל צומת (מרכזיות):",
+                opt_uniform: "אחיד (ללא משקל)",
+                node_color: "צבע צומת (קיבוץ):",
+                legend_colors: "מקרא צבעים",
+                legend_shape: "סוג רשת (Shape)",
+                internal_net: "פנימית (גיבורים)",
+                external_net: "חיצונית (אנשי קשר)",
+                homophily_title: "מדד הומופיליה (Homophily)",
+                homophily_desc: "״דומה מושך דומה״: בודק האם קשרים נוטים להיווצר בין אנשים בעלי רקע זהה.",
+                homophily_var: "בדוק נטייה קהילתית לפי:",
+                btn_calc: "חשב",
+                link_pred_title: "חיזוי קשרים חסרים",
+                link_pred_desc: "אלגוריתם הסורק חברים משותפים בגרף להצעת קשרים היסטוריים שלא תועדו במפורש.",
+                btn_predict: "הרץ אלגוריתם חיזוי",
+                top_predictions: "5 הקשרים הסמויים הסבירים ביותר:",
+                export_title: "Graph ML Dataset (מוכן לייצוא ל-XGBoost)",
+                btn_export: "ייצא ל-CSV",
+                load_data_first: "טען נתונים תחילה",
+                insights_title: "המלצות אלגוריתמיות",
+                insights_desc: "המערכת סרקה את כל מכלול משתני הרקע והפעילות, ומציעה את הקשרים הסטטיסטיים החזקים ביותר שנמצאו.",
+                processing: "המערכת מעבדת את הנתונים...",
+                heatmap_title: "מפת חום (Correlation Heatmap)",
+                heatmap_desc: "מציג את עוצמת המתאם (Cramér's V) בין כל זוגות המשתנים המרכזיים. ככל שהצבע כחול וכהה יותר - הקשר חזק יותר.",
+                
+                // Explanations (Terms)
+                term_cramers_title: "מתאם חי-בריבוע (Cramér's V)",
+                term_cramers_desc: "מדד סטטיסטי (בין 0 ל-1) המעריך את עוצמת הקשר בין שני משתנים קטגוריאליים (למשל: שיוך פוליטי והשתתפות במרד).\n\n• 0 משמעו שאין כל קשר בין המשתנים.\n• ערך קרוב ל-1 מעיד כי משתנה אחד מנבא כמעט בוודאות את המשתנה השני.",
+                term_degree_title: "מרכזיות דרגה (Degree Centrality)",
+                term_degree_desc: "סופר כמה קשרים ישירים (Direct Contacts) יש לדמות בתוך הרשת.\n\nדמויות עם ערך גבוה הן פעילות מאוד, מוכרות לאנשים רבים, או מעורבות באופן ישיר באופרציה היומיומית של המחתרת.",
+                term_betweenness_title: "מרכזיות בין-המונים (Betweenness)",
+                term_betweenness_desc: "מאתר דמויות המשמשות כ'גשר' (או 'צוואר בקבוק') המחבר בין קבוצות שונות במחתרת שללא דמות זו היו מנותקות זו מזו.\n\nמבחינה היסטורית, אם דמות בעלת Betweenness גבוה נתפסה או נהרגה, הרשת הייתה בסכנת פיצול וקריסת תקשורת.",
+                term_pagerank_title: "השפעה רשתית (PageRank)",
+                term_pagerank_desc: "אלגוריתם המודד 'יוקרה' או 'השפעה'.\nבניגוד ל-Degree שרק סופר קשרים, פה קשר לדמות שהיא בעצמה מרכזית ומקושרת שווה הרבה יותר מקשר לדמות שולית.\nדמות עם PageRank גבוה היא לרוב בעלת מעמד היררכי משמעותי.",
+                term_kcore_title: "פירוק גלעין הרשת (K-Core)",
+                term_kcore_desc: "אלגוריתם המקלף בהדרגה את שולי הרשת (אנשים עם מעט קשרים) שלב אחר שלב.\n\nמה שנותר בסוף התהליך (ה-Core הגבוה ביותר) הוא הגרעין הקשה, הצפוף והמלוכד ביותר של הארגון.",
+                term_community_title: "זיהוי קהילות (Community Detection)",
+                term_community_desc: "אלגוריתם (Label Propagation) הסורק את המבנה הגיאומטרי של הרשת ומחפש אוטומטית 'קליקות'.\n\nהוא מקבץ יחד צבירים של דמויות שקשורות זו לזו בצפיפות גבוהה יותר מאשר לשאר הרשת, ובכך חושף תתי-ארגונים סמויים.",
+                term_homophily_title: "מדד הומופיליה (Homophily)",
+                term_homophily_desc: "עקרון מתורת הרשתות של 'דומה מושך דומה'.\n\nהמדד בודק האם קשרים נוצרים לרוב בין אנשים מאותו רקע (למשל, חברי השומר הצעיר מתחברים בעיקר בינם לבין עצמם), או שהרשת חוצה גבולות מגזריים ומפלגתיים.",
+                term_link_prediction_title: "חיזוי קשרים (Link Prediction)",
+                term_link_prediction_desc: "כלי המשמש לאיתור חוסרים בתיעוד ההיסטורי.\n\nהאלגוריתם (Adamic-Adar) סורק חברים משותפים בין דמויות. אם לשני אנשים יש מספר רב של חברים משותפים מקושרים-היטב, האלגוריתם יציע שבסבירות גבוהה גם הם הכירו וקיימו קשר, גם אם הקשר הזה חסר במסמכי הארכיון.",
+                
+                // JS dynamic strings
+                js_ready: "מוכן לעיבוד.",
+                js_reading: "קורא אקסל...",
+                js_reading_drive: "טוען קובץ מ-Drive...",
+                js_reading_drive_proxy: "מנסה נתיב חלופי ל-Drive...",
+                js_error_lib: "ספריית פיענוח האקסל חסרה. אנא בדוק חיבור אינטרנט.",
+                js_error_empty: "הקובץ ריק או אינו בפורמט אקסל תקין.",
+                js_error_parse: "שגיאה בפענוח קובץ האקסל:\n",
+                js_error_algo: "הנתונים נטענו, אך אירעה שגיאה. פתח קונסול (F12) לפרטים.\n",
+                js_error_access: "שגיאת גישה לקובץ.",
+                js_error_drive_link: "לינק Drive לא תקין. הדבק קישור שיתוף מלא לקובץ.",
+                js_error_drive_fetch: "לא הצלחתי להוריד את הקובץ מהלינק. ודא שהקובץ פתוח לצפייה ושזהו קובץ Excel.",
+                js_error_drive_cors: "הדפדפן חסם טעינה ישירה מ-Google Drive (CORS). נסה קישור Google Sheets (export), או הורד מקומית וטען דרך כפתור הקובץ.",
+                js_error_source_required: "בחר קובץ אקסל או הדבק לינק Drive לפני הטעינה.",
+                js_error_file_required: "בחר קובץ אקסל לפני טעינה מקומית.",
+                js_calc_done: "עיבוד מתמטי הושלם! ({n} צמתים)",
+                js_leader_title: "מובילי מדד:",
+                js_external: "(חיצוני)",
+                js_homophily_res: "מתוך {t} קשרים תקינים שנבדקו, <b>{f}%</b> הם בין דמויות בעלות אותו מאפיין ({a}).",
+                js_no_data: "אין נתונים.",
+                js_no_locations: "אין מיקומים תקינים להצגה.",
+                js_insight_head: "קשר חזק בין <span class='text-blue-700'>{f1}</span> ל-<span class='text-blue-700'>{f2}</span>",
+                js_insight_body: "ציון הקורלציה מגיע ל-<b>{s}</b>. מומלץ לבדוק בגרף ההצלבה כיצד הם מתפלגים.",
+                js_internal_net: "רשת פנימית",
+                js_external_net: "רשת חיצונית",
+                js_cat: "קטגוריה:",
+                js_corr: "מתאם:",
+                person_more_info: "מידע נוסף מהמקורות",
+                person_id: "מזהה",
+                person_age: "גיל ב-1943",
+                person_gender: "מגדר",
+                person_education: "השכלה",
+                person_affiliation: "שיוך פוליטי",
+                person_zob: "חברות ב-ŻOB",
+                person_aryan: "מעבר לצד הארי"
+            },
+            en: {
+                app_title: "Communists in Warsaw Ghetto - מעבדת אליהו",
+                waiting_data: "Waiting for data...",
+                load_excel: "Load Centralized Data File (Excel - .xlsx)",
+                load_info: "Automatically loads Sheet 1 (Internal Network) & Sheet 2 (External).",
+                load_drive: "Or load an Excel file from a Google Drive link (.xlsx)",
+                load_drive_info: "The file must be shared as Anyone with the link (Viewer).",
+                btn_load_drive: "Load from Drive",
+                btn_choose_excel: "Choose Excel File",
+                no_file_selected: "No file selected",
+                btn_process: "Process & Calculate Metrics",
+                tab_1: "1. Target Weights",
+                tab_2: "2. Network Metrics (SNA)",
+                tab_3: "3. ML Integration & Prediction",
+                tab_4: "4. Dataset Overview",
+                tab_5: "5. Locations",
+                locations_title: "Locations From The Locations Sheet",
+                locations_desc: "Only standardized locations are shown (column C) with valid latitude/longitude (columns H,I).",
+                locations_map_title: "Map",
+                locations_table_title: "Locations Table",
+                locations_col_place: "Place Name (A)",
+                locations_col_std: "Standardized Location (C)",
+                opt_target: "Target Variable Optimization",
+                opt_desc: "Select a target variable and see which background features predict it best.",
+                target_var: "Target Variable to Test:",
+                opt_zob: "ŻOB Membership",
+                opt_aryan: "Moved to Aryan Side",
+                opt_gl: "GL Membership",
+                bg_vars: "Background Features to Compare:",
+                opt_gender: "Gender",
+                opt_edu: "Education Level",
+                opt_affil: "Former Political Affiliation",
+                opt_cat: "Background Category",
+                opt_socio: "Socio-Economic Status",
+                opt_cult: "Cultural Background",
+                btn_calc_weights: "Calculate Predictive Weights",
+                pred_results: "Prediction Score (0 to 1):",
+                cross_tab: "Manual Drill-down: Cross Tabulation",
+                axis_x: "X Axis (Explaining Var)",
+                axis_y: "Y Axis (Target Var)",
+                net_algos: "Network Algorithms",
+                node_size: "Node Size (Centrality):",
+                opt_uniform: "Uniform (No Weight)",
+                node_color: "Node Color (Grouping):",
+                legend_colors: "Color Legend",
+                legend_shape: "Network Type (Shape)",
+                internal_net: "Internal (Protagonists)",
+                external_net: "External (Contacts)",
+                homophily_title: "Homophily Metric",
+                homophily_desc: "'Birds of a feather': Checks if connections tend to form between similar people.",
+                homophily_var: "Test community tendency by:",
+                btn_calc: "Calculate",
+                link_pred_title: "Missing Link Prediction",
+                link_pred_desc: "Algorithm scanning common neighbors to suggest undocumented historical ties.",
+                btn_predict: "Run Prediction Algorithm",
+                top_predictions: "Top 5 Most Probable Hidden Links:",
+                export_title: "Graph ML Dataset (Export to XGBoost)",
+                btn_export: "Export to CSV",
+                load_data_first: "Load data first",
+                insights_title: "Algorithmic Insights",
+                insights_desc: "The system scanned all background features and suggests the strongest statistical correlations.",
+                processing: "System is processing data...",
+                heatmap_title: "Correlation Heatmap",
+                heatmap_desc: "Displays the strength of association (Cramér's V) between all major variables. Darker blue = stronger connection.",
+                
+                // Explanations (Terms)
+                term_cramers_title: "Cramér's V (Correlation)",
+                term_cramers_desc: "A statistical measure (ranging from 0 to 1) evaluating the strength of association between two categorical variables (e.g., political affiliation and uprising participation).\n\n• 0 means no association.\n• A value close to 1 indicates that one variable almost perfectly predicts the other.",
+                term_degree_title: "Degree Centrality",
+                term_degree_desc: "Counts the number of direct connections a person has within the network.\n\nIndividuals with a high Degree are highly active, widely known, or directly involved in the day-to-day operations of the underground.",
+                term_betweenness_title: "Betweenness Centrality",
+                term_betweenness_desc: "Identifies figures who act as a 'bridge' (or bottleneck) connecting different groups that would otherwise be disconnected.\n\nHistorically, if a figure with high Betweenness was captured or killed, the network risked fragmenting into isolated sub-groups.",
+                term_pagerank_title: "PageRank (Influence)",
+                term_pagerank_desc: "An algorithm measuring 'prestige' or 'influence'.\nUnlike Degree which merely counts ties, PageRank values a connection to a highly central figure much more than a connection to a marginal one. High PageRank usually denotes a significant hierarchical status.",
+                term_kcore_title: "K-Core Decomposition",
+                term_kcore_desc: "An algorithm that iteratively peels away the margins of the network (people with few connections).\n\nWhat remains at the highest Core level is the tightest, most cohesive inner circle of the organization.",
+                term_community_title: "Community Detection",
+                term_community_desc: "An algorithm (Label Propagation) that automatically searches for 'cliques'.\n\nIt clusters together groups of figures who are more densely connected to each other than to the rest of the network, thereby revealing hidden sub-organizations.",
+                term_homophily_title: "Homophily",
+                term_homophily_desc: "A network theory principle meaning 'birds of a feather flock together'.\n\nIt measures whether ties predominantly form between individuals from the same background (e.g., members of the same youth movement) or if the network frequently crosses sectarian lines.",
+                term_link_prediction_title: "Link Prediction",
+                term_link_prediction_desc: "A tool used to locate gaps in historical documentation.\n\nThe algorithm (Adamic-Adar) scans mutual friends. If two people share many highly connected mutual friends, the algorithm suggests a high probability that they knew each other, even if archival documents missed it.",
+                
+                // JS dynamic strings
+                js_ready: "Ready for processing.",
+                js_reading: "Reading Excel...",
+                js_reading_drive: "Loading file from Drive...",
+                js_reading_drive_proxy: "Trying a fallback Drive route...",
+                js_error_lib: "Excel library missing. Check internet connection.",
+                js_error_empty: "File is empty or invalid Excel format.",
+                js_error_parse: "Error parsing Excel:\n",
+                js_error_algo: "Data loaded, but a math error occurred. Check Console (F12).\n",
+                js_error_access: "File access error.",
+                js_error_drive_link: "Invalid Drive link. Paste a full sharing URL for a file.",
+                js_error_drive_fetch: "Could not download the file from this link. Make sure it is shared for viewing and is an Excel file.",
+                js_error_drive_cors: "The browser blocked direct Google Drive fetching (CORS). Try a Google Sheets export link, or download locally and use file upload.",
+                js_error_source_required: "Choose an Excel file or paste a Drive link before loading.",
+                js_error_file_required: "Choose an Excel file before local loading.",
+                js_calc_done: "Processing complete! ({n} nodes)",
+                js_leader_title: "Top Nodes:",
+                js_external: "(External)",
+                js_homophily_res: "Out of {t} valid edges, <b>{f}%</b> are between figures sharing the same trait ({a}).",
+                js_no_data: "No data available.",
+                js_no_locations: "No standardized locations available to display.",
+                js_insight_head: "Strong link: <span class='text-blue-700'>{f1}</span> & <span class='text-blue-700'>{f2}</span>",
+                js_insight_body: "Correlation score reaches <b>{s}</b>. Highly recommended to check the cross-tabulation chart to see their distribution.",
+                js_internal_net: "Internal Network",
+                js_external_net: "External Network",
+                js_cat: "Category:",
+                js_corr: "Correlation:",
+                person_more_info: "Further Important Information",
+                person_id: "ID",
+                person_age: "Age in 1943",
+                person_gender: "Gender",
+                person_education: "Education",
+                person_affiliation: "Political Affiliation",
+                person_zob: "ŻOB Membership",
+                person_aryan: "Moved To Aryan Side"
+            }
+        };
+
+        // בטיחות: יצירת האייקונים
+        document.addEventListener('DOMContentLoaded', () => {
+            try { if (typeof lucide !== 'undefined') lucide.createIcons(); } catch (e) {}
+            setupInfoModals();
+            setupPersonModal();
+            applyTranslations();
+        });
+
+        // --- Application State ---
+        const AppState = {
+            lang: 'he', // Default language
+            rawProtagonists: null,
+            rawContacts: null,
+            protagonistHeaderByLetter: {},
+            protagonistDetailsById: new Map(),
+            locationsData: [],
+            nodesMap: new Map(),
+            adjList: new Map(),
+            processedData: { nodes: [], links: [], tableData: [] },
+            chartInstance: null,
+            networkSimulation: null,
+            locationsMap: null,
+            locationsLayer: null,
+            communityColorByAttr: null  // I: לשמור דרך צביעה עם קהילות
+        };
+
+        const DashboardColumns = {
+            causeRequired: ['E', 'H', 'N', 'O', 'R', 'U', 'W'],
+            causeOptional: ['G'],
+            result: ['AB', 'AC', 'AD', 'AE', 'AF', 'AG', 'AH', 'AI', 'AJ']
+        };
+
+        function columnIndexToLetter(index) {
+            let n = index + 1;
+            let s = '';
+            while (n > 0) {
+                const mod = (n - 1) % 26;
+                s = String.fromCharCode(65 + mod) + s;
+                n = Math.floor((n - 1) / 26);
+            }
+            return s;
+        }
+
+        function getColumnKey(letter) {
+            return `__COL_${letter}`;
+        }
+
+        const headerTranslationHe = {
+            'Serial no.': 'מספר סידורי',
+            'First Name': 'שם פרטי',
+            'Name': 'שם',
+            'Surname': 'שם משפחה',
+            'Full name': 'שם מלא',
+            'Category': 'קטגוריה',
+            'Gender': 'מגדר',
+            'Male / Female / ?': 'מגדר',
+            'Year of Birth': 'שנת לידה',
+            'Birth Date': 'תאריך לידה',
+            'Date of Birth': 'תאריך לידה',
+            'Age in 1943': 'גיל ב-1943',
+            'Age': 'גיל',
+            'Age 1943': 'גיל ב-1943',
+            'education - low / mid / high': 'רמת השכלה',
+            'education': 'רמת השכלה',
+            'Education': 'רמת השכלה',
+            'Low / Mid / High': 'רמת השכלה',
+            'former political affiliation': 'שיוך פוליטי קודם',
+            'affiliation': 'שיוך פוליטי',
+            'Affiliation': 'שיוך פוליטי',
+            'Political affiliation': 'שיוך פוליטי',
+            'Aryan side': 'מעבר לצד הארי',
+            'Aryan': 'צד ארי',
+            'Move to Aryan': 'מעבר לצד הארי',
+            'ŻOB': 'חברות באי"ל',
+            'ZOB': 'חברות באי"ל',
+            'GL': 'חברות במחתרת הפולנית',
+            'Direct contacts (seiral no.)': 'אנשי קשר ישירים',
+            'Direct contacts': 'אנשי קשר',
+            'Contacts': 'אנשי קשר',
+            'Non-Communist or non-Jewish direct contacts (seiral no.-seperate tab)': 'אנשי קשר חיצוניים ישירים',
+            'External contacts': 'אנשי קשר חיצוניים',
+            'External Direct Contacts': 'אנשי קשר חיצוניים',
+            'Family': 'משפחה',
+            'Family members': 'חברי משפחה'
+        };
+
+        function smartTranslateHeader(header) {
+            const key = String(header || '').trim();
+            if (!key) return key;
+            if (headerTranslationHe[key]) return headerTranslationHe[key];
+            if (headerTranslationHe[key.toLowerCase()]) return headerTranslationHe[key.toLowerCase()];
+            for (const [en, he] of Object.entries(headerTranslationHe)) {
+                if (key.toLowerCase().includes(en.toLowerCase())) return he;
+            }
+            return key;
+        }
+
+        function translateHeaderToHebrew(header) {
+            return smartTranslateHeader(header);
+        }
+
+        function getColumnDisplayName(letter) {
+            const header = String(AppState.protagonistHeaderByLetter[letter] || '').trim();
+            if (!header) return AppState.lang === 'he' ? `עמודה ${letter}` : `Column ${letter}`;
+            if (AppState.lang === 'he') {
+                const translated = translateHeaderToHebrew(header);
+                return `${letter} - ${translated}`;
+            }
+            return `${letter} - ${header}`;
+        }
+
+        function findHeaderLetter(regexList, fallbackLetter = '') {
+            const entries = Object.entries(AppState.protagonistHeaderByLetter || {});
+            for (const [letter, rawHeader] of entries) {
+                const header = String(rawHeader || '').trim();
+                if (!header) continue;
+                for (const rx of regexList) {
+                    if (rx.test(header)) return letter;
+                }
+            }
+            return fallbackLetter;
+        }
+
+        function getCellByLetter(row, letter, fallback = '') {
+            if (!letter) return fallback;
+            const value = row[getColumnKey(letter)];
+            return value == null || String(value).trim() === '' ? fallback : value;
+        }
+
+        function buildDetectedSchema() {
+            return {
+                protagonistId: findHeaderLetter([/serial/i, /^id$/i, /serial\s*no/i], 'A'),
+                firstName: findHeaderLetter([/first\s*name/i, /^name$/i], 'B'),
+                surname: findHeaderLetter([/surname/i, /last\s*name/i, /family\s*name/i], 'C'),
+                category: findHeaderLetter([/^category$/i, /category/i], 'D'),
+                gender: findHeaderLetter([/^gender$/i, /gender/i], 'E'),
+                age: findHeaderLetter([/age\s*in\s*1943/i, /^age$/i], 'F'),
+                education: findHeaderLetter([/education/i], 'H'),
+                affiliation: findHeaderLetter([/former\s*political\s*affiliation/i, /affiliation/i], 'N'),
+                aryanSide: findHeaderLetter([/aryan\s*side/i], 'AB'),
+                zob: findHeaderLetter([/żob/i, /zob/i], 'AC'),
+                directContacts: findHeaderLetter([/direct\s*contacts/i], ''),
+                externalContacts: findHeaderLetter([/non-communist/i, /non-jewish/i, /seperate\s*tab/i], '')
+            };
+        }
+
+        function parseSheetWithColumnAliases(sheet) {
+            const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+            if (!rows || rows.length === 0) return { rows: [], headerByLetter: {} };
+
+            const headerRowIndex = rows.findIndex(rowArr => {
+                const nonEmptyCells = (rowArr || []).filter(v => String(v || '').trim() !== '').length;
+                return nonEmptyCells >= 3;
+            });
+            if (headerRowIndex < 0) return { rows: [], headerByLetter: {} };
+
+            const headerRow = rows[headerRowIndex] || [];
+            const headerByLetter = {};
+            headerRow.forEach((headerValue, idx) => {
+                const letter = columnIndexToLetter(idx);
+                headerByLetter[letter] = String(headerValue || '').trim();
+            });
+
+            const parsedRows = rows.slice(headerRowIndex + 1).map(rowArr => {
+                const obj = {};
+                headerRow.forEach((headerValue, idx) => {
+                    const letter = columnIndexToLetter(idx);
+                    const header = String(headerValue || '').trim();
+                    const value = rowArr[idx];
+                    if (header && obj[header] === undefined) obj[header] = value;
+                    obj[getColumnKey(letter)] = value;
+                });
+                return obj;
+            });
+
+            return { rows: parsedRows, headerByLetter };
+        }
+
+        function populateColumnDrivenControls() {
+            const featureContainer = document.getElementById('features-container');
+            const targetSelect = document.getElementById('stat-target-var');
+            const xSelect = document.getElementById('stat-var-x');
+            const ySelect = document.getElementById('stat-var-y');
+            const homophilySelect = document.getElementById('homophily-var');
+            if (!featureContainer || !targetSelect || !xSelect || !ySelect || !homophilySelect) return;
+
+            const allCause = [...DashboardColumns.causeRequired, ...DashboardColumns.causeOptional];
+
+            featureContainer.innerHTML = allCause.map(letter => {
+                const checked = DashboardColumns.causeRequired.includes(letter) ? 'checked' : '';
+                return `<label class="flex items-center gap-2 cursor-pointer hover:bg-slate-100 p-0.5 rounded"><input type="checkbox" class="feature-cb" value="${getColumnKey(letter)}" ${checked}> <span>${getColumnDisplayName(letter)}</span></label>`;
+            }).join('');
+
+            targetSelect.innerHTML = DashboardColumns.result.map(letter => `<option value="${getColumnKey(letter)}">${getColumnDisplayName(letter)}</option>`).join('');
+            xSelect.innerHTML = allCause.map(letter => `<option value="${getColumnKey(letter)}">${getColumnDisplayName(letter)}</option>`).join('');
+            ySelect.innerHTML = DashboardColumns.result.map(letter => `<option value="${getColumnKey(letter)}">${getColumnDisplayName(letter)}</option>`).join('');
+            homophilySelect.innerHTML = allCause.map(letter => `<option value="${getColumnKey(letter)}">${getColumnDisplayName(letter)}</option>`).join('');
+        }
+
+        // --- Translation Engine ---
+        function t(key) {
+            return i18n[AppState.lang][key] || key;
+        }
+
+        function applyTranslations() {
+            // Update document direction
+            document.documentElement.dir = AppState.lang === 'he' ? 'rtl' : 'ltr';
+            
+            // Update static elements with data-i18n
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (i18n[AppState.lang][key]) {
+                    el.innerHTML = i18n[AppState.lang][key];
+                }
+            });
+
+            // Update Language Toggle Button text
+            document.getElementById('lang-label').innerText = AppState.lang === 'he' ? 'English' : 'עברית';
+
+            // Keep selected filename intact; only translate the default no-file label.
+            if (typeof fileInputExcel !== 'undefined' && typeof selectedFileName !== 'undefined') {
+                const hasFile = !!(fileInputExcel.files && fileInputExcel.files.length > 0);
+                if (!hasFile) selectedFileName.innerText = t('no_file_selected');
+            }
+
+            // Dynamic controls are column-driven and need to reflect the active language.
+            populateColumnDrivenControls();
+
+            // Re-render components if data exists
+            if (AppState.processedData.nodes.length > 0) {
+                updateStatsView();
+                initNetworkGraph();
+                updateIntegrativeTable();
+                buildCorrelationMatrix();
+            }
+            if (AppState.locationsData.length > 0 || document.getElementById('tab-locations')) {
+                renderLocationsTab();
+            }
+        }
+
+        document.getElementById('lang-toggle').addEventListener('click', () => {
+            AppState.lang = AppState.lang === 'he' ? 'en' : 'he';
+            applyTranslations();
+        });
+
+        // --- Info Modals System ---
+        function setupInfoModals() {
+            const modal = document.getElementById('info-modal');
+            const titleEl = document.getElementById('info-modal-title');
+            const descEl = document.getElementById('info-modal-desc');
+            
+            document.querySelectorAll('.info-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const term = btn.getAttribute('data-term');
+                    if (term) {
+                        titleEl.innerText = t(`term_${term}_title`);
+                        descEl.innerText = t(`term_${term}_desc`);
+                        modal.classList.remove('hidden');
+                    }
+                });
+            });
+
+            document.getElementById('close-info-modal').addEventListener('click', () => {
+                modal.classList.add('hidden');
+            });
+            
+            modal.addEventListener('click', (e) => {
+                if(e.target === modal) modal.classList.add('hidden');
+            });
+        }
+
+        function setupPersonModal() {
+            const modal = document.getElementById('person-modal');
+            const closeBtn = document.getElementById('close-person-modal');
+
+            closeBtn.addEventListener('click', () => modal.classList.add('hidden'));
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) modal.classList.add('hidden');
+            });
+        }
+
+
+        // --- UI Elements ---
+        let fileInputExcel = null;
+        let btnChooseExcel = null;
+        let selectedFileName = null;
+        let driveUrlInput = null;
+        let btnLoadDrive = null;
+        let btnProcess = null;
+        let statusIcon = null;
+        let statusText = null;
+
+        // I: initialize UI elements אחרי ש-DOM טוען
+        function initializeUIElements() {
+            fileInputExcel = document.getElementById('file-excel');
+            btnChooseExcel = document.getElementById('btn-choose-excel');
+            selectedFileName = document.getElementById('selected-file-name');
+            driveUrlInput = document.getElementById('drive-url');
+            btnLoadDrive = document.getElementById('btn-load-drive');
+            btnProcess = document.getElementById('btn-process');
+            statusIcon = document.getElementById('data-status-icon');
+            statusText = document.getElementById('data-status-text');
+
+            // בדיקת null
+            if (!fileInputExcel || !btnChooseExcel || !selectedFileName || !driveUrlInput || !btnLoadDrive || !btnProcess || !statusIcon || !statusText) {
+                console.error('Error: Some UI elements not found in DOM');
+                return false;
+            }
+
+            return true;
+        }
+
+        function setStatus(colorClass, message) {
+            if (!statusIcon || !statusText) return;
+            statusIcon.classList.remove('bg-red-500', 'bg-yellow-500', 'bg-blue-500', 'bg-green-500');
+            statusIcon.classList.add(colorClass);
+            statusText.innerText = message;
+        }
+
+        function updateLoadButtonState() {
+            if (!fileInputExcel || !btnProcess || !btnLoadDrive || !driveUrlInput) return;
+            const hasFile = !!(fileInputExcel.files && fileInputExcel.files.length > 0);
+            const hasDriveUrl = String(driveUrlInput.value || '').trim().length > 0;
+            const canLoadAny = hasFile || hasDriveUrl;
+
+            btnProcess.disabled = !hasFile;
+            btnProcess.classList.toggle('opacity-50', !hasFile);
+            btnProcess.classList.toggle('cursor-not-allowed', !hasFile);
+
+            btnLoadDrive.disabled = !hasDriveUrl;
+            btnLoadDrive.classList.toggle('opacity-50', !hasDriveUrl);
+            btnLoadDrive.classList.toggle('cursor-not-allowed', !hasDriveUrl);
+
+            if (!canLoadAny) {
+                setStatus('bg-red-500', t('waiting_data'));
+            } else {
+                setStatus('bg-yellow-500', t('js_ready'));
+            }
+        }
+
+        function handleFileSelection() {
+            if (!fileInputExcel || !selectedFileName) return;
+            const file = fileInputExcel.files && fileInputExcel.files[0] ? fileInputExcel.files[0] : null;
+            selectedFileName.innerText = file ? file.name : t('no_file_selected');
+            updateLoadButtonState();
+        }
+
+        // I: ערך את ה-event listeners - יכול להיות שDB כבר טוען
+        function attachEventListeners() {
+            if (!initializeUIElements()) {
+                console.error('Failed to initialize UI elements');
+                return false;
+            }
+
+            fileInputExcel.addEventListener('change', handleFileSelection);
+            fileInputExcel.addEventListener('input', handleFileSelection);
+            driveUrlInput.addEventListener('input', updateLoadButtonState);
+            driveUrlInput.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter' && !btnLoadDrive.disabled) {
+                    event.preventDefault();
+                    btnLoadDrive.click();
+                }
+            });
+
+            // I: הוסף event listeners לטעינה מ-Drive וקובץ מקומי
+            btnLoadDrive.addEventListener('click', handleDriveLoad);
+
+            btnProcess.addEventListener('click', async () => {
+                const file = fileInputExcel.files[0];
+
+                if (!file) {
+                    alert(t('js_error_file_required'));
+                    return;
+                }
+
+                setStatus('bg-blue-500', t('js_reading'));
+
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    try {
+                        parseWorkbookFromArrayBuffer(e.target.result);
+                    } catch(error) {
+                        console.error("Parse error:", error);
+                        alert(t('js_error_parse') + error.message);
+                        setStatus('bg-red-500', 'Error');
+                        return;
+                    }
+
+                    processLoadedWorkbook();
+                };
+
+                reader.onerror = function() {
+                    alert(t('js_error_access'));
+                    setStatus('bg-red-500', 'Error');
+                };
+
+                reader.readAsArrayBuffer(file);
+            });
+
+            updateLoadButtonState();
+            return true;
+        }
+
+        // I: אם DOM כבר טוען - קרא מיד, אחרת חכה ל-DOMContentLoaded
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', attachEventListeners);
+        } else {
+            attachEventListeners();
+        }
+
+        function normalizeKey(value) {
+            return String(value || '').trim().toLowerCase();
+        }
+
+        function getSafeId(value) {
+            if (value == null) return null;
+            const raw = String(value).trim();
+            if (!raw) return null;
+            return raw.replace(/\.0+$/, '');
+        }
+
+        function findSheetName(workbook, predicate) {
+            return workbook.SheetNames.find(name => predicate(normalizeKey(name)));
+        }
+
+        function extractFurtherInfoFromRawRow(row) {
+            if (!row || typeof row !== 'object') return '';
+            const exactCandidates = [
+                'further impotant information (source, p. no.)',
+                'further important information (source, p. no.)'
+            ];
+
+            for (const key of Object.keys(row)) {
+                const normalized = normalizeKey(key);
+                if (exactCandidates.includes(normalized) || (normalized.includes('further') && normalized.includes('source'))) {
+                    return String(row[key] || '').trim();
+                }
+            }
+            return '';
+        }
+
+        function parseProtagonistDetailsMap(workbook) {
+            const detailsById = new Map();
+            const protagonistsSheetName = findSheetName(workbook, key => key === 'protagonists');
+            if (!protagonistsSheetName) return detailsById;
+
+            const rows = XLSX.utils.sheet_to_json(workbook.Sheets[protagonistsSheetName], { header: 1, defval: '' });
+            if (!rows || rows.length < 2) return detailsById;
+
+            const headers = rows[0].map(h => normalizeKey(h));
+            const idIndex = headers.findIndex(h => h.includes('serial') || h === 'id' || h.includes('id'));
+            let infoIndex = headers.findIndex(h => h.includes('further') && h.includes('source'));
+            if (infoIndex < 0) infoIndex = 47; // AV column fallback
+
+            rows.slice(1).forEach(row => {
+                const id = getSafeId(row[idIndex >= 0 ? idIndex : 0]);
+                const info = String(row[infoIndex] || '').trim();
+                if (id && info) detailsById.set(id, info);
+            });
+
+            return detailsById;
+        }
+
+        function parseLocationsSheet(workbook) {
+            const locationsSheetName = findSheetName(workbook, key => key === 'locations');
+            if (!locationsSheetName) return [];
+
+            const rows = XLSX.utils.sheet_to_json(workbook.Sheets[locationsSheetName], { header: 1, defval: '' });
+            if (!rows || rows.length < 2) return [];
+
+            const parsed = rows.slice(1).map(row => {
+                const placeName = String(row[0] || '').trim(); // A
+                const standardizedLocation = String(row[2] || '').trim(); // C
+                const latRaw = row[7]; // H
+                const lonRaw = row[8]; // I
+                const lat = typeof latRaw === 'number' ? latRaw : Number(String(latRaw).trim());
+                const lon = typeof lonRaw === 'number' ? lonRaw : Number(String(lonRaw).trim());
+
+                return {
+                    placeName,
+                    standardizedLocation,
+                    lat,
+                    lon
+                };
+            }).filter(item => {
+                const disallowed = /(not\s*standard|non\s*standard|לא\s*סטנדרט|unknown|n\/a)/i;
+                const hasStandardized = !!item.standardizedLocation && !disallowed.test(item.standardizedLocation);
+                const validCoords = Number.isFinite(item.lat) && Number.isFinite(item.lon);
+                return hasStandardized && validCoords;
+            });
+
+            return parsed;
+        }
+
+        function parseWorkbookFromArrayBuffer(arrayBuffer) {
+            if (typeof XLSX === 'undefined') throw new Error(t('js_error_lib'));
+
+            const data = new Uint8Array(arrayBuffer);
+            const workbook = XLSX.read(data, {type: 'array'});
+            if (!workbook.SheetNames || workbook.SheetNames.length === 0) throw new Error(t('js_error_empty'));
+
+            const protagonistsSheetName = workbook.SheetNames[0];
+            const contactsSheetName = workbook.SheetNames.length > 1 ? workbook.SheetNames[1] : null;
+
+            const protagonistsParsed = parseSheetWithColumnAliases(workbook.Sheets[protagonistsSheetName]);
+            AppState.rawProtagonists = protagonistsParsed.rows;
+            AppState.protagonistHeaderByLetter = protagonistsParsed.headerByLetter;
+            AppState.rawContacts = contactsSheetName ? XLSX.utils.sheet_to_json(workbook.Sheets[contactsSheetName]) : [];
+            AppState.protagonistDetailsById = parseProtagonistDetailsMap(workbook);
+            AppState.locationsData = parseLocationsSheet(workbook);
+            populateColumnDrivenControls();
+        }
+
+        function processLoadedWorkbook() {
+            try {
+                buildDataModelAndRunAlgorithms();
+            } catch (algoError) {
+                console.error("Algorithm error:", algoError);
+                alert(t('js_error_algo') + algoError.message);
+                setStatus('bg-red-500', 'Error');
+            }
+        }
+
+        function extractDriveFileId(urlText) {
+            const text = String(urlText || '').trim();
+            if (!text) return null;
+
+            const fileMatch = text.match(/\/file\/d\/([a-zA-Z0-9_-]{10,})/);
+            if (fileMatch) return fileMatch[1];
+
+            try {
+                const url = new URL(text);
+                const idParam = url.searchParams.get('id');
+                if (idParam) return idParam;
+            } catch (e) {
+                return null;
+            }
+
+            return null;
+        }
+
+        function extractGoogleSheetId(urlText) {
+            const text = String(urlText || '').trim();
+            if (!text) return null;
+
+            const sheetMatch = text.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]{10,})/);
+            if (sheetMatch) return sheetMatch[1];
+            return null;
+        }
+
+        function extractResourceKey(urlText) {
+            try {
+                const url = new URL(String(urlText || '').trim());
+                return url.searchParams.get('resourcekey') || '';
+            } catch (e) {
+                return '';
+            }
+        }
+
+        function buildDriveDownloadCandidates(rawUrl) {
+            const trimmed = String(rawUrl || '').trim();
+            const sheetId = extractGoogleSheetId(trimmed);
+            const fileId = extractDriveFileId(trimmed);
+            const resourceKey = extractResourceKey(trimmed);
+            const resourceKeyParam = resourceKey ? `&resourcekey=${encodeURIComponent(resourceKey)}` : '';
+
+            if (sheetId) {
+                return [
+                    `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=xlsx`,
+                    `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=xlsx&id=${sheetId}`,
+                    trimmed
+                ];
+            }
+
+            if (!fileId) return [trimmed];
+
+            return [
+                `https://drive.google.com/uc?export=download&id=${fileId}${resourceKeyParam}`,
+                `https://drive.google.com/uc?id=${fileId}&export=download${resourceKeyParam}`,
+                `https://drive.usercontent.google.com/download?id=${fileId}&export=download&confirm=t${resourceKeyParam}`,
+                trimmed
+            ];
+        }
+
+        async function fetchWorkbookFromDrive(rawUrl) {
+            const candidates = buildDriveDownloadCandidates(rawUrl);
+            let lastError = null;
+
+            for (const candidate of candidates) {
+                try {
+                    const response = await fetch(candidate, { method: 'GET', credentials: 'omit', cache: 'no-store', redirect: 'follow' });
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                    const contentType = (response.headers.get('content-type') || '').toLowerCase();
+                    if (contentType.includes('text/html')) throw new Error('html-response');
+
+                    const fileBuffer = await response.arrayBuffer();
+                    if (!fileBuffer || fileBuffer.byteLength === 0) throw new Error('empty-response');
+
+                    return fileBuffer;
+                } catch (error) {
+                    lastError = error;
+                }
+            }
+
+            setStatus('bg-blue-500', t('js_reading_drive_proxy'));
+
+            const proxyCandidates = candidates.flatMap((url) => [
+                `https://corsproxy.io/?${encodeURIComponent(url)}`,
+                `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`
+            ]);
+
+            for (const candidate of proxyCandidates) {
+                try {
+                    const response = await fetch(candidate, { method: 'GET', credentials: 'omit', cache: 'no-store', redirect: 'follow' });
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                    const contentType = (response.headers.get('content-type') || '').toLowerCase();
+                    if (contentType.includes('text/html')) throw new Error('html-response');
+
+                    const fileBuffer = await response.arrayBuffer();
+                    if (!fileBuffer || fileBuffer.byteLength === 0) throw new Error('empty-response');
+
+                    return fileBuffer;
+                } catch (error) {
+                    lastError = error;
+                }
+            }
+
+            if (lastError && lastError.name === 'TypeError') {
+                throw new Error('cors-blocked');
+            }
+
+            throw lastError || new Error('drive-download-failed');
+        }
+
+        async function handleDriveLoad() {
+            const rawUrl = String(driveUrlInput.value || '').trim();
+
+            if (!rawUrl) {
+                alert(t('js_error_drive_link'));
+                return;
+            }
+
+            setStatus('bg-blue-500', t('js_reading_drive'));
+
+            try {
+                const fileBuffer = await fetchWorkbookFromDrive(rawUrl);
+                parseWorkbookFromArrayBuffer(fileBuffer);
+                processLoadedWorkbook();
+            } catch (error) {
+                console.error("Drive load error:", error);
+                const errorKey = error && error.message === 'cors-blocked' ? 'js_error_drive_cors' : 'js_error_drive_fetch';
+                alert(t(errorKey));
+                setStatus('bg-red-500', 'Error');
+            }
+        }
+
+        // --- Main Data Pipeline & Algorithms ---
+        function buildDataModelAndRunAlgorithms() {
+            const nodesMap = new Map();
+            const links = [];
+            const adjList = new Map();
+            const schema = buildDetectedSchema();
+
+            // 1. Parse Nodes with schema detection + column-letter fallbacks.
+            AppState.rawProtagonists.forEach((row, rowIndex) => {
+                const id = getSafeId(getCellByLetter(row, schema.protagonistId, rowIndex + 1));
+                if (!id) return;
+
+                const firstName = String(getCellByLetter(row, schema.firstName, '') || '').trim();
+                const surname = String(getCellByLetter(row, schema.surname, '') || '').trim();
+                const fullName = `${firstName} ${surname}`.trim() || `Person ${id}`;
+
+                nodesMap.set(id, {
+                    id: id,
+                    name: fullName,
+                    type: 'protagonist',
+                    category: String(getCellByLetter(row, schema.category, 'Unknown') || 'Unknown').trim(),
+                    gender: String(getCellByLetter(row, schema.gender, 'Unknown') || 'Unknown').trim(),
+                    age: getCellByLetter(row, schema.age, ''),
+                    education: String(getCellByLetter(row, schema.education, 'Unknown') || 'Unknown').trim(),
+                    affiliation: String(getCellByLetter(row, schema.affiliation, 'Unknown') || 'Unknown').trim(),
+                    aryanSide: getCellByLetter(row, schema.aryanSide, '') ? 'Yes' : 'No',
+                    zob: String(getCellByLetter(row, schema.zob, 'No') || 'No').trim(),
+                    furtherInfo: AppState.protagonistDetailsById.get(id) || extractFurtherInfoFromRawRow(row) || '',
+                    rawRow: row,
+                    degree: 0, betweenness: 0, pagerank: 0, kcore: 0, community: 0
+                });
+                adjList.set(id, new Set());
+            });
+
+            if (AppState.rawContacts) {
+                AppState.rawContacts.forEach(row => {
+                    const id = getSafeId(row['ID']);
+                    if (!id || nodesMap.has(id)) return;
+                    nodesMap.set(id, {
+                        id: id, name: row['Name'] || `Contact ${id}`,
+                        type: 'external',
+                        category: String(row['Category'] || 'External').trim(),
+                        gender: 'Unknown', education: 'Unknown', affiliation: 'Unknown', zob: 'Unknown', rawRow: row,
+                        furtherInfo: '',
+                        degree: 0, betweenness: 0, pagerank: 0, kcore: 0, community: 0
+                    });
+                    adjList.set(id, new Set());
+                });
+            }
+
+            // 2. Parse Links (if contact columns are present).
+            const addEdge = (u, v) => {
+                if (u && v && u !== v && nodesMap.has(u) && nodesMap.has(v)) {
+                    if (!adjList.get(u).has(v)) {
+                        adjList.get(u).add(v);
+                        adjList.get(v).add(u);
+                        links.push({ source: u, target: v });
+                    }
+                }
+            };
+
+            AppState.rawProtagonists.forEach((row, rowIndex) => {
+                const u = getSafeId(getCellByLetter(row, schema.protagonistId, rowIndex + 1));
+                if (!u) return;
+
+                const contactValues = [
+                    getCellByLetter(row, schema.directContacts, ''),
+                    getCellByLetter(row, schema.externalContacts, '')
+                ];
+
+                contactValues.forEach(contacts => {
+                    if (contacts != null && String(contacts).trim() !== '') {
+                        String(contacts).split(/[,;]/).forEach(v => addEdge(u, getSafeId(v)));
+                    }
+                });
+            });
+
+            const nodesArr = Array.from(nodesMap.values());
+            AppState.nodesMap = nodesMap;
+            AppState.adjList = adjList;
+            AppState.processedData.links = links;
+
+            // Network Algorithms
+            nodesArr.forEach(n => n.degree = adjList.get(n.id).size);
+
+            try { calculateBetweenness(nodesArr, adjList); } catch (e) { console.warn('Betweenness err:', e); }
+            try { calculatePageRank(nodesArr, adjList); } catch (e) { console.warn('PageRank err:', e); }
+            try { calculateKCore(nodesArr, adjList); } catch (e) { console.warn('KCore err:', e); }
+            try { calculateCommunities(nodesArr, adjList); } catch (e) { console.warn('Communities err:', e); }
+
+            AppState.processedData.nodes = nodesArr;
+            AppState.processedData.tableData = nodesArr.filter(n => n.type === 'protagonist');
+
+            setStatus('bg-green-500', t('js_calc_done').replace('{n}', nodesArr.length));
+            updateCommunitySelector();
+
+            // Render UI
+            try { updateStatsView(); } catch (e) { console.warn('Stats view err', e); }
+            try { initNetworkGraph(); } catch (e) { console.warn('Network view err', e); }
+            try { updateIntegrativeTable(); } catch (e) { console.warn('Table view err', e); }
+            try { buildCorrelationMatrix(); } catch (e) { console.warn('Matrix view err', e); }
+            try { renderLocationsTab(); } catch (e) { console.warn('Locations view err', e); }
+        }
+
+        // --- Network Algorithms ---
+        function calculateBetweenness(nodes, adjList) {
+            let CB = {}; nodes.forEach(n => CB[n.id] = 0);
+            nodes.forEach(s => {
+                let S = []; let P = {}; let sigma = {}; let d = {};
+                nodes.forEach(n => { P[n.id] = []; sigma[n.id] = 0; d[n.id] = -1; });
+                sigma[s.id] = 1; d[s.id] = 0; let Q = [s.id];
+                while (Q.length > 0) {
+                    let v = Q.shift(); S.push(v);
+                    adjList.get(v).forEach(w => {
+                        if (d[w] === -1) { d[w] = d[v] + 1; Q.push(w); }
+                        if (d[w] === d[v] + 1) { sigma[w] += sigma[v]; P[w].push(v); }
+                    });
+                }
+                let delta = {}; nodes.forEach(n => delta[n.id] = 0);
+                while (S.length > 0) {
+                    let w = S.pop();
+                    P[w].forEach(v => { delta[v] += (sigma[v] / sigma[w]) * (1 + delta[w]); });
+                    if (w !== s.id) CB[w] += delta[w];
+                }
+            });
+            let maxCB = Math.max(...Object.values(CB), 1);
+            nodes.forEach(n => { n.betweenness = parseFloat((CB[n.id] / maxCB).toFixed(4)); });
+        }
+
+        function calculatePageRank(nodes, adjList) {
+            const d = 0.85; const N = nodes.length;
+            if (N === 0) return;
+            let pr = {}; nodes.forEach(n => pr[n.id] = 1 / N);
+            for (let iter = 0; iter < 30; iter++) {
+                let nextPr = {}; nodes.forEach(n => nextPr[n.id] = (1 - d) / N);
+                nodes.forEach(n => {
+                    let neighbors = Array.from(adjList.get(n.id));
+                    if (neighbors.length > 0) {
+                        let share = pr[n.id] / neighbors.length;
+                        neighbors.forEach(nbr => nextPr[nbr] += d * share);
+                    }
+                });
+                pr = nextPr;
+            }
+            let maxPR = Math.max(...Object.values(pr), 1);
+            nodes.forEach(n => { n.pagerank = parseFloat((pr[n.id] / maxPR).toFixed(4)); });
+        }
+
+        function calculateKCore(nodes, adjList) {
+            let deg = {}; nodes.forEach(n => deg[n.id] = n.degree);
+            let core = {}; let removed = new Set();
+            for (let k = 1; k < 50; k++) {
+                let changed = true;
+                while (changed) {
+                    changed = false;
+                    nodes.forEach(n => {
+                        if (!removed.has(n.id) && deg[n.id] < k) {
+                            removed.add(n.id); core[n.id] = k - 1;
+                            adjList.get(n.id).forEach(nbr => { deg[nbr]--; });
+                            changed = true;
+                        }
+                    });
+                }
+                if (removed.size === nodes.length) break;
+            }
+            nodes.forEach(n => { n.kcore = core[n.id] !== undefined ? core[n.id] : 50; });
+        }
+
+        function calculateCommunities(nodes, adjList) {
+            recalculateCommunitiesWithK(nodes, adjList, 5);
+        }
+        
+        function recalculateCommunitiesWithK(nodes, adjList, k = 5) {
+            let labels = {};
+            nodes.forEach((n, idx) => labels[n.id] = idx);
+            for (let iter = 0; iter < 15; iter++) {
+                let shuffled = [...nodes].sort(() => Math.random() - 0.5);
+                shuffled.forEach(n => {
+                    let counts = {};
+                    adjList.get(n.id).forEach(nbr => {
+                        let l = labels[nbr];
+                        counts[l] = (counts[l] || 0) + 1;
+                    });
+                    let maxCount = 0; let bestLabel = labels[n.id];
+                    counts[labels[n.id]] = (counts[labels[n.id]] || 0) + 0.1;
+                    for (let l in counts) {
+                        if (counts[l] > maxCount) { maxCount = counts[l]; bestLabel = l; }
+                    }
+                    if (maxCount > 0) labels[n.id] = bestLabel;
+                });
+            }
+            let uniqueLabels = [...new Set(Object.values(labels))];
+            let finalLabels = {};
+            uniqueLabels.slice(0, k).forEach((label, idx) => {
+                finalLabels[label] = idx + 1;
+            });
+            nodes.forEach(n => {
+                let origLabel = labels[n.id];
+                // I: קהילות ממוספרות לפי K בדיוק - כל node שלא בחור מקבל K (לא 900)
+                n.community = `קהילה ${finalLabels[origLabel] !== undefined ? finalLabels[origLabel] : k}`;
+            });
+        }
+        
+        function updateCommunitySelector() {
+            const communities = [...new Set(AppState.processedData.nodes.map(n => n.community))].sort();
+            communitySelector.innerHTML = '<option value="">בחר קהילה...</option>' + communities.map(c => `<option value="${c}">${c}</option>`).join('');
+            populateCommunityAttributeSelector();
+        }
+        
+        function populateCommunityAttributeSelector() {
+            // I: Populate dropdown עם כל ה-columns שאפשר לצבוע לפיהם (עמודות סיבה וקטגוריות node)
+            const communityAttrSelector = document.getElementById('community-attr-selector');
+            if (!communityAttrSelector || AppState.processedData.nodes.length === 0) return;
+            
+            const attributes = [
+                { value: 'community', label: 'קהילות (ברירת מחדל)' },
+                { value: 'category', label: 'קטגוריית רקע' },
+                { value: 'zob', label: 'חברות באי"ל' },
+                { value: 'affiliation', label: 'שיוך פוליטי' },
+                { value: 'education', label: 'רמת השכלה' },
+                { value: 'gender', label: 'מגדר' }
+            ];
+            
+            // Add columns from cause attributes
+            const allCauseLetters = [...DashboardColumns.causeRequired, ...DashboardColumns.causeOptional];
+            allCauseLetters.forEach(letter => {
+                attributes.push({ value: getColumnKey(letter), label: `${getColumnDisplayName(letter)} (סיבה)` });
+            });
+            
+            communityAttrSelector.innerHTML = attributes.map(attr => `<option value="${attr.value}">${attr.label}</option>`).join('');
+        }
+        
+        function displayCommunityProfile(communityId) {
+            if (!communityId) return;
+            const membersInCommunity = AppState.processedData.nodes.filter(n => n.community === communityId);
+            if (membersInCommunity.length === 0) {
+                communityProfile.innerHTML = '<p>אין נתונים בקהילה זו</p>';
+                communityProfile.classList.remove('hidden');
+                return;
+            }
+            const memberNames = membersInCommunity.map(n => n.name).join(', ');
+            // I: הצגת פרטי קהילה - שמות חברים + תדירות תכונות
+            let profile = `<div class="font-bold mb-2"><i data-lucide="users" class="w-3 h-3 inline"></i> ${membersInCommunity.length} אדם</div>`;
+            profile += `<div class="text-xs mb-2"><b>שמות:</b><br>${memberNames}</div>`;
+            const schema = buildDetectedSchema();
+            const allCauseLetters = [...DashboardColumns.causeRequired, ...DashboardColumns.causeOptional];
+            const resultLetters = DashboardColumns.result;
+            if (allCauseLetters.length > 0) {
+                profile += '<div class="border-t pt-1 mt-1"><b class="text-xs">תכונות סיבה (רקע):</b><br>';
+                const causeSummary = {};
+                allCauseLetters.forEach(letter => {
+                    const header = AppState.protagonistHeaderByLetter[letter] || letter;
+                    const values = membersInCommunity.map(n => String(getCellByLetter(n.rawRow, letter, '') || '').trim()).filter(v => v);
+                    if (values.length > 0) {
+                        const freqMap = {};
+                        values.forEach(v => freqMap[v] = (freqMap[v] || 0) + 1);
+                        const topVal = Object.entries(freqMap).sort((a, b) => b[1] - a[1])[0];
+                        profile += `<span class="text-xs block">• ${getColumnDisplayName(letter)}: <b>${topVal[0]}</b> (${topVal[1]}/${values.length})</span>`;
+                    }
+                });
+                profile += '</div>';
+            }
+            if (resultLetters.length > 0) {
+                profile += '<div class="border-t pt-1 mt-1"><b class="text-xs">תכונות תוצאה (פעילות):</b><br>';
+                resultLetters.forEach(letter => {
+                    const values = membersInCommunity.map(n => String(getCellByLetter(n.rawRow, letter, '') || '').trim()).filter(v => v);
+                    if (values.length > 0) {
+                        const freqMap = {};
+                        values.forEach(v => freqMap[v] = (freqMap[v] || 0) + 1);
+                        const topVal = Object.entries(freqMap).sort((a, b) => b[1] - a[1])[0];
+                        profile += `<span class="text-xs block">• ${getColumnDisplayName(letter)}: <b>${topVal[0]}</b> (${topVal[1]}/${values.length})</span>`;
+                    }
+                });
+                profile += '</div>';
+            }
+            communityProfile.innerHTML = profile;
+            communityProfile.classList.remove('hidden');
+            try { lucide.createIcons(); } catch (e) {}
+        }
+
+        // --- TAB 1: Stat Logic ---
+        const selVarX = document.getElementById('stat-var-x');
+        const selVarY = document.getElementById('stat-var-y');
+        selVarX.addEventListener('change', updateStatsView);
+        selVarY.addEventListener('change', updateStatsView);
+
+        function updateStatsView() {
+            if (AppState.processedData.tableData.length === 0) return;
+            const xKey = selVarX.value; const yKey = selVarY.value;
+            const crossTab = {}; let totalValid = 0;
+
+            AppState.processedData.tableData.forEach(d => {
+                let xVal = d.rawRow[xKey] ? String(d.rawRow[xKey]).trim() : 'Unknown';
+                let yVal = d.rawRow[yKey] ? String(d.rawRow[yKey]).trim() : 'No/Empty';
+                if (xVal === '') xVal = 'Unknown'; if (yVal === '') yVal = 'No';
+                
+                if (!crossTab[xVal]) crossTab[xVal] = {};
+                crossTab[xVal][yVal] = (crossTab[xVal][yVal] || 0) + 1;
+                totalValid++;
+            });
+
+            const xLabels = Object.keys(crossTab);
+            const yLabels = Array.from(new Set(xLabels.flatMap(x => Object.keys(crossTab[x]))));
+            
+            const colors = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b'];
+            const datasets = yLabels.map((y, idx) => ({
+                label: y, data: xLabels.map(x => crossTab[x][y] || 0),
+                backgroundColor: colors[idx % colors.length]
+            }));
+
+            const ctx = document.getElementById('statsChart').getContext('2d');
+            if (AppState.chartInstance) AppState.chartInstance.destroy();
+            AppState.chartInstance = new Chart(ctx, {
+                type: 'bar', data: { labels: xLabels, datasets: datasets },
+                options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true } }, plugins: { legend: { labels: { font: { family: 'Rubik' } } } } }
+            });
+        }
+
+        document.getElementById('btn-calc-weights').addEventListener('click', () => {
+            if (AppState.processedData.tableData.length === 0) return alert(t('js_no_data'));
+            const target = document.getElementById('stat-target-var').value;
+            const checkboxes = document.querySelectorAll('.feature-cb:checked');
+            if(checkboxes.length === 0) return;
+            
+            let results = [];
+            Array.from(checkboxes).forEach(cb => {
+                let feat = cb.value;
+                let crossTab = {}; let total = 0;
+                AppState.processedData.tableData.forEach(d => {
+                    let xVal = d.rawRow[feat] ? String(d.rawRow[feat]).trim() : 'Unknown';
+                    let yVal = d.rawRow[target] ? String(d.rawRow[target]).trim() : 'No';
+                    if (!crossTab[xVal]) crossTab[xVal] = {};
+                    crossTab[xVal][yVal] = (crossTab[xVal][yVal] || 0) + 1;
+                    total++;
+                });
+                let xLabels = Object.keys(crossTab);
+                let yLabels = Array.from(new Set(xLabels.flatMap(x => Object.keys(crossTab[x]))));
+                let v = computeCramersV(xLabels, yLabels, crossTab, total);
+                let label = cb.nextElementSibling.innerText.trim(); // Get span text which is translated
+                results.push({feature: label, score: v});
+            });
+
+            results.sort((a,b) => b.score - a.score);
+            const ul = document.getElementById('weights-list');
+            ul.innerHTML = results.map(r => `
+                <li>
+                    <div class="flex justify-between text-xs mb-1">
+                        <span class="font-medium">${r.feature}</span>
+                        <span class="font-bold text-purple-700">${r.score.toFixed(3)}</span>
+                    </div>
+                    <div class="w-full bg-purple-200/50 rounded-full h-2">
+                        <div class="bg-purple-600 h-2 rounded-full" style="width: ${r.score * 100}%"></div>
+                    </div>
+                </li>
+            `).join('');
+            document.getElementById('weights-results').classList.remove('hidden');
+        });
+
+        function computeCramersV(xLabels, yLabels, crossTab, total) {
+            let chiSq = 0;
+            for(let x of xLabels) {
+                let rowTotal = Object.values(crossTab[x]).reduce((a,b)=>a+b, 0);
+                for(let y of yLabels) {
+                    let colTotal = 0;
+                    for(let x2 of xLabels) colTotal += (crossTab[x2][y] || 0);
+                    let expected = (rowTotal * colTotal) / total;
+                    let observed = crossTab[x][y] || 0;
+                    if(expected > 0) chiSq += Math.pow(observed - expected, 2) / expected;
+                }
+            }
+            let minDim = Math.min(xLabels.length - 1, yLabels.length - 1);
+            if(minDim <= 0 || total === 0) return 0;
+            let v = Math.sqrt(chiSq / (total * minDim));
+            return isNaN(v) ? 0 : (v > 1 ? 1 : v); 
+        }
+
+        // --- TAB Navigation Logic ---
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.tab-btn').forEach(b => {
+                    b.classList.remove('tab-active', 'text-blue-600');
+                    b.classList.add('text-slate-500');
+                });
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+                
+                const targetBtn = e.target.closest('.tab-btn');
+                targetBtn.classList.add('tab-active');
+                targetBtn.classList.remove('text-slate-500');
+                const targetId = targetBtn.getAttribute('data-target');
+                document.getElementById(targetId).classList.remove('hidden');
+
+                if(targetId === 'tab-network' && AppState.processedData.nodes.length > 0) initNetworkGraph();
+                if(targetId === 'tab-matrix' && AppState.processedData.nodes.length > 0) buildCorrelationMatrix();
+                if(targetId === 'tab-locations') renderLocationsTab();
+            });
+        });
+
+        function safeDisplay(value) {
+            const text = String(value == null ? '' : value).trim();
+            return text || '-';
+        }
+
+        function showPersonDetailsModal(nodeData) {
+            const modal = document.getElementById('person-modal');
+            const titleEl = document.getElementById('person-modal-title');
+            const bodyEl = document.getElementById('person-modal-body');
+            const row = nodeData.rawRow || {};
+
+            titleEl.innerText = `${nodeData.name} (ID: ${nodeData.id})`;
+
+            bodyEl.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div class="bg-slate-50 rounded border border-slate-200 p-2"><b>${t('person_id')}:</b> ${safeDisplay(nodeData.id)}</div>
+                    <div class="bg-slate-50 rounded border border-slate-200 p-2"><b>${t('js_cat')}</b> ${safeDisplay(nodeData.category)}</div>
+                    <div class="bg-slate-50 rounded border border-slate-200 p-2"><b>${t('person_age')}:</b> ${safeDisplay(nodeData.age)}</div>
+                    <div class="bg-slate-50 rounded border border-slate-200 p-2"><b>${t('person_gender')}:</b> ${safeDisplay(nodeData.gender)}</div>
+                    <div class="bg-slate-50 rounded border border-slate-200 p-2"><b>${t('person_education')}:</b> ${safeDisplay(nodeData.education)}</div>
+                    <div class="bg-slate-50 rounded border border-slate-200 p-2"><b>${t('person_affiliation')}:</b> ${safeDisplay(nodeData.affiliation)}</div>
+                    <div class="bg-slate-50 rounded border border-slate-200 p-2"><b>${t('person_zob')}:</b> ${safeDisplay(nodeData.zob)}</div>
+                    <div class="bg-slate-50 rounded border border-slate-200 p-2"><b>${t('person_aryan')}:</b> ${safeDisplay(nodeData.aryanSide || row['Aryan side'])}</div>
+                </div>
+                <div class="mt-4">
+                    <h4 class="font-semibold text-slate-800 mb-1">${t('person_more_info')}</h4>
+                    <div class="bg-emerald-50 border border-emerald-100 rounded p-3 whitespace-pre-line text-slate-700">${safeDisplay(nodeData.furtherInfo)}</div>
+                </div>
+            `;
+
+            modal.classList.remove('hidden');
+        }
+
+        // --- TAB 2: Network D3 ---
+        const selSizeBy = document.getElementById('net-size-by');
+        const selColorBy = document.getElementById('net-color-by');
+        const communityCountSlider = document.getElementById('community-count-slider');
+        const communitySelector = document.getElementById('community-selector');
+        const btnRecalcCommunities = document.getElementById('btn-recalc-communities');
+        const communityProfile = document.getElementById('community-profile');
+        const communityAttrSelector = document.getElementById('community-attr-selector');
+        const btnApplyCommunityAttr = document.getElementById('btn-apply-community-attr');
+        
+        selSizeBy.addEventListener('change', initNetworkGraph);
+        selColorBy.addEventListener('change', () => {
+            // Show communities subsection only if "community" is selected
+            const communitiesSubsection = document.getElementById('communities-subsection');
+            if (selColorBy.value === 'community') {
+                communitiesSubsection.classList.remove('hidden');
+            } else {
+                communitiesSubsection.classList.add('hidden');
+            }
+            initNetworkGraph();
+        });
+        
+        // Initialize: עדיף communities sub-section כשהדף טוען
+        document.addEventListener('DOMContentLoaded', () => {
+            const communitiesSubsection = document.getElementById('communities-subsection');
+            if (selColorBy.value === 'community' && communitiesSubsection) {
+                communitiesSubsection.classList.remove('hidden');
+            }
+        });
+        
+        btnRecalcCommunities.addEventListener('click', () => {
+            if (AppState.processedData.nodes.length === 0) return;
+            const numCommunities = parseInt(communityCountSlider.value) || 5;
+            // I: עדכון הקהילות עם K חדש, לא השרטוט שוב
+            recalculateCommunitiesWithK(AppState.processedData.nodes, AppState.adjList, numCommunities);
+            updateCommunitySelector();
+            // רק אם צבע קהילות נבחר, צייר רשת חדשה (כדי לראות צבעים חדשים)
+            if (selColorBy.value === 'community') {
+                initNetworkGraph();
+            }
+        });
+        
+        communitySelector.addEventListener('change', (e) => {
+            const communityId = e.target.value;
+            if (!communityId) {
+                communityProfile.classList.add('hidden');
+                return;
+            }
+            displayCommunityProfile(communityId);
+        });
+        
+        btnApplyCommunityAttr.addEventListener('click', () => {
+            if (AppState.processedData.nodes.length === 0) return;
+            const selectedAttr = communityAttrSelector.value;
+            if (!selectedAttr) return;
+            // I: החלף צביעה - כל community יצייר בצבע בהתאם ל-attribute שנבחר
+            AppState.communityColorByAttr = selectedAttr;
+            initNetworkGraph();
+        });
+
+        function initNetworkGraph() {
+            if (AppState.processedData.nodes.length === 0) return;
+            communityProfile.classList.add('hidden');
+            const container = document.getElementById('network-container');
+            container.innerHTML = ''; 
+            
+            const width = Math.max(300, container.clientWidth || 800); 
+            const height = Math.max(300, container.clientHeight || 500);
+
+            const sizeAttr = selSizeBy.value; 
+            // I: אם בחרנו attribute צביעה עם קהילות, השתמש בו. אחרת, השתמש בselColorBy
+            let colorAttr = selColorBy.value;
+            if (colorAttr === 'community' && AppState.communityColorByAttr) {
+                colorAttr = AppState.communityColorByAttr;
+            }
+
+            const nodes = AppState.processedData.nodes.map(d => Object.create(d));
+            const links = AppState.processedData.links.map(d => Object.create(d));
+
+            // I: אם colorAttr הוא column key (__COL_X), קבל מ-rawRow, אחרת קבל מ-node properties
+            const getColorValue = (node, attr) => {
+                if (attr.startsWith('__COL_')) {
+                    return String(node.rawRow && node.rawRow[attr] ? node.rawRow[attr] : 'Unknown').trim();
+                }
+                return String(node[attr] || 'Unknown').trim();
+            };
+
+            const uniqueColors = [...new Set(nodes.map(d => getColorValue(d, colorAttr)))].sort();
+            const colorMap = d3.scaleOrdinal(d3.schemeCategory10).domain(uniqueColors);
+            
+            document.getElementById('network-legend').innerHTML = uniqueColors.map(val => `
+                <div class="flex items-center gap-2">
+                    <span class="w-3 h-3 rounded-full shrink-0" style="background-color: ${colorMap(val)}"></span>
+                    <span class="truncate">${val}</span>
+                </div>
+            `).join('');
+
+            const svg = d3.select("#network-container").append("svg").attr("width", width).attr("height", height)
+                .call(d3.zoom().on("zoom", (e) => g.attr("transform", e.transform)));
+            const g = svg.append("g");
+            const tooltip = d3.select("#tooltip");
+
+            const simulation = d3.forceSimulation(nodes)
+                .force("link", d3.forceLink(links).id(d => d.id).distance(40))
+                .force("charge", d3.forceManyBody().strength(-80))
+                .force("center", d3.forceCenter(width / 2, height / 2))
+                .force("collide", d3.forceCollide().radius(d => getRadius(d) + 4));
+
+            const link = g.append("g").selectAll("line").data(links).join("line").attr("class", "link");
+
+            const node = g.append("g").selectAll("path").data(nodes).join("path")
+                .attr("class", "node")
+                .attr("d", d => {
+                    const r = getRadius(d);
+                    const symbolType = d.type === 'external' ? d3.symbolSquare : d3.symbolCircle;
+                    return d3.symbol().type(symbolType).size(Math.PI * r * r)();
+                })
+                .attr("fill", d => colorMap(getColorValue(d, colorAttr)))
+                .call(d3.drag()
+                    .on("start", e => { if (!e.active) simulation.alphaTarget(0.3).restart(); e.subject.fx = e.subject.x; e.subject.fy = e.subject.y; })
+                    .on("drag", e => { e.subject.fx = e.x; e.subject.fy = e.y; })
+                    .on("end", e => { if (!e.active) simulation.alphaTarget(0); e.subject.fx = null; e.subject.fy = null; })
+                )
+                .on("mouseover", (event, d) => {
+                    tooltip.transition().duration(200).style("opacity", 1);
+                    const netTypeTag = d.type === 'external' 
+                        ? `<span class="text-rose-700 bg-rose-100 px-1.5 py-0.5 rounded text-[10px] font-bold border border-rose-200">${t('js_external_net')}</span>` 
+                        : `<span class="text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded text-[10px] font-bold border border-blue-200">${t('js_internal_net')}</span>`;
+                    
+                    tooltip.html(`
+                        <div class="font-bold border-b border-slate-200 pb-2 mb-2 flex justify-between items-start gap-4">
+                            <div>${d.name} <br><span class="text-slate-400 text-[10px] font-normal">(ID: ${d.id})</span></div>
+                            ${netTypeTag}
+                        </div>
+                        <div class="text-xs space-y-1">
+                            <div><b>${t('js_cat')}</b> <span class="text-slate-700">${d.category}</span></div>
+                            ${d.type === 'protagonist' ? `<div><b>ŻOB:</b> ${d.zob}</div>` : ''}
+                            <hr class="my-1.5 border-slate-100">
+                            <div><b>Degree:</b> ${d.degree}</div>
+                            <div><b>Betweenness:</b> ${d.betweenness}</div>
+                            <div><b>PageRank:</b> ${d.pagerank}</div>
+                            <div><b>Community ID:</b> ${d.community}</div>
+                        </div>
+                    `).style("left", (event.pageX + 15) + "px").style("top", (event.pageY - 15) + "px");
+                })
+                .on("mouseout", () => tooltip.transition().duration(500).style("opacity", 0))
+                .on("click", (event, d) => {
+                    event.stopPropagation();
+                    if (d.type === 'protagonist') showPersonDetailsModal(d);
+                });
+
+            simulation.on("tick", () => {
+                link.attr("x1", d => d.source.x).attr("y1", d => d.source.y).attr("x2", d => d.target.x).attr("y2", d => d.target.y);
+                node.attr("transform", d => `translate(${d.x},${d.y})`);
+            });
+
+            function getRadius(d) {
+                if(sizeAttr === 'uniform') return 5;
+                if(sizeAttr === 'degree') return Math.max(3, Math.min(15, d.degree));
+                if(sizeAttr === 'betweenness') return Math.max(3, d.betweenness * 15 + 3);
+                if(sizeAttr === 'pagerank') return Math.max(3, d.pagerank * 15 + 3);
+                return 5;
+            }
+
+            const sortedNodes = [...AppState.processedData.nodes].sort((a,b) => b[sizeAttr==='uniform'?'degree':sizeAttr] - a[sizeAttr==='uniform'?'degree':sizeAttr]).slice(0, 15);
+            document.getElementById('leaderboard-title').innerText = `${t('js_leader_title')} ${sizeAttr}`;
+            document.getElementById('top-nodes-list').innerHTML = sortedNodes.map((n, i) => `
+                <li class="flex justify-between items-center py-1 border-b border-slate-100">
+                    <span class="truncate pe-2 text-xs"><b>${i+1}.</b> ${n.name} <span class="text-[9px] text-slate-400 ms-1">${n.type === 'external' ? t('js_external') : ''}</span></span>
+                    <span class="text-[10px] bg-slate-200 px-1.5 rounded">${Number(n[sizeAttr==='uniform'?'degree':sizeAttr]).toFixed(sizeAttr==='degree'?0:3)}</span>
+                </li>
+            `).join('');
+        }
+
+        function renderLocationsTab() {
+            const tbody = document.getElementById('locations-table-body');
+            const mapContainer = document.getElementById('locations-map');
+            if (!tbody || !mapContainer) return;
+
+            const locations = Array.isArray(AppState.locationsData) ? AppState.locationsData : [];
+
+            if (locations.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-slate-400">${t('js_no_locations')}</td></tr>`;
+                if (AppState.locationsLayer) {
+                    AppState.locationsLayer.clearLayers();
+                }
+                return;
+            }
+
+            tbody.innerHTML = locations.map(loc => `
+                <tr class="hover:bg-slate-50">
+                    <td class="px-2 py-1">${safeDisplay(loc.placeName)}</td>
+                    <td class="px-2 py-1">${safeDisplay(loc.standardizedLocation)}</td>
+                    <td class="px-2 py-1">${Number(loc.lat).toFixed(5)}</td>
+                    <td class="px-2 py-1">${Number(loc.lon).toFixed(5)}</td>
+                </tr>
+            `).join('');
+
+            if (typeof L === 'undefined') return;
+
+            if (!AppState.locationsMap) {
+                AppState.locationsMap = L.map('locations-map', { zoomControl: true }).setView([52.2297, 21.0122], 5);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 18,
+                    attribution: '&copy; OpenStreetMap contributors'
+                }).addTo(AppState.locationsMap);
+            }
+
+            if (AppState.locationsLayer) {
+                AppState.locationsLayer.clearLayers();
+            }
+
+            AppState.locationsLayer = L.layerGroup().addTo(AppState.locationsMap);
+            const markers = [];
+
+            locations.forEach(loc => {
+                const marker = L.circleMarker([loc.lat, loc.lon], {
+                    radius: 6,
+                    color: '#047857',
+                    weight: 1,
+                    fillColor: '#10b981',
+                    fillOpacity: 0.8
+                }).bindPopup(`<b>${safeDisplay(loc.placeName)}</b><br>${safeDisplay(loc.standardizedLocation)}<br>Lat: ${Number(loc.lat).toFixed(5)}, Lon: ${Number(loc.lon).toFixed(5)}`);
+
+                marker.addTo(AppState.locationsLayer);
+                markers.push(marker);
+            });
+
+            if (markers.length > 0) {
+                const group = L.featureGroup(markers);
+                AppState.locationsMap.fitBounds(group.getBounds().pad(0.2));
+            }
+
+            setTimeout(() => {
+                if (AppState.locationsMap) AppState.locationsMap.invalidateSize();
+            }, 50);
+        }
+
+        // --- TAB 3: Integrations ---
+        document.getElementById('btn-calc-homophily').addEventListener('click', () => {
+            const attr = document.getElementById('homophily-var').value;
+            let sameAttrEdges = 0; let totalEdges = 0;
+            AppState.processedData.links.forEach(l => {
+                const u = AppState.nodesMap.get(l.source.id || l.source); const v = AppState.nodesMap.get(l.target.id || l.target);
+                if(u && v && u.rawRow && v.rawRow) {
+                    let valU = String(u.rawRow[attr]).trim(); let valV = String(v.rawRow[attr]).trim();
+                    if(valU && valV && valU !== 'undefined' && valV !== 'undefined') {
+                        totalEdges++;
+                        if(valU === valV) sameAttrEdges++;
+                    }
+                }
+            });
+            const frac = totalEdges > 0 ? (sameAttrEdges / totalEdges) * 100 : 0;
+            const resDiv = document.getElementById('homophily-result');
+            resDiv.classList.remove('hidden');
+            let resText = t('js_homophily_res').replace('{t}', totalEdges).replace('{f}', frac.toFixed(1)).replace('{a}', attr);
+            resDiv.innerHTML = resText;
+        });
+
+        document.getElementById('btn-predict-links').addEventListener('click', () => {
+            const nodes = AppState.processedData.nodes; const adj = AppState.adjList; let predictions = [];
+            for(let i=0; i<nodes.length; i++) {
+                for(let j=i+1; j<nodes.length; j++) {
+                    const u = nodes[i].id; const v = nodes[j].id;
+                    if(!adj.get(u).has(v)) { 
+                        let score = 0;
+                        let intersection = new Set([...adj.get(u)].filter(x => adj.get(v).has(x)));
+                        intersection.forEach(w => { let degW = adj.get(w).size; if(degW > 1) score += 1 / Math.log(degW); });
+                        if(score > 0) predictions.push({u: nodes[i].name, v: nodes[j].name, score: score});
+                    }
+                }
+            }
+            predictions.sort((a,b) => b.score - a.score);
+            document.getElementById('link-prediction-results').classList.remove('hidden');
+            document.getElementById('prediction-cards').innerHTML = predictions.slice(0, 5).map((p, i) => `
+                <div class="bg-teal-50 border border-teal-100 p-2 rounded flex flex-col items-center text-center justify-center relative">
+                    <div class="absolute top-0 end-0 bg-teal-600 text-white text-[9px] px-1 rounded-bl">#${i+1}</div>
+                    <span class="text-xs font-bold text-slate-700">${p.u}</span>
+                    <i data-lucide="arrow-left-right" class="w-3 h-3 text-teal-400 my-1"></i>
+                    <span class="text-xs font-bold text-slate-700">${p.v}</span>
+                    <span class="text-[10px] text-teal-600 mt-1">Score: ${p.score.toFixed(2)}</span>
+                </div>
+            `).join('');
+            try { lucide.createIcons(); } catch(e){}
+        });
+
+        function updateIntegrativeTable() {
+            const tbody = document.getElementById('integration-table-body');
+            const data = AppState.processedData.tableData;
+            tbody.innerHTML = data.sort((a,b) => b.degree - a.degree).map(d => `
+                <tr class="hover:bg-slate-50">
+                    <td class="px-3 py-1 font-medium text-start">${d.id}</td>
+                    <td class="px-3 py-1 text-start">${d.name}</td>
+                    <td class="px-3 py-1 bg-blue-50/50 font-bold text-blue-700 text-start">${d.degree}</td>
+                    <td class="px-3 py-1 bg-purple-50/50 font-medium text-start">${d.betweenness}</td>
+                    <td class="px-3 py-1 bg-orange-50/50 font-medium text-start">${d.pagerank}</td>
+                    <td class="px-3 py-1 bg-teal-50/50 font-medium text-start">${d.kcore}</td>
+                    <td class="px-3 py-1 bg-rose-50/50 text-[10px] text-start">${d.community}</td>
+                </tr>
+            `).join('');
+        }
+
+        document.getElementById('btn-export').addEventListener('click', () => {
+            if (AppState.processedData.tableData.length === 0) return alert(t('js_no_data'));
+            const exportData = AppState.processedData.tableData.map(d => ({
+                ID: d.id, Name: d.name,
+                Network_Degree: d.degree, Network_Betweenness: d.betweenness,
+                Network_PageRank: d.pagerank, Network_KCore: d.kcore, Network_Community: d.community,
+                Age: d.age, Gender: d.gender, Category: d.category, Education: d.education,
+                Affiliation: d.affiliation, AryanSide: d.aryanSide, ZOB: d.zob
+            }));
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(exportData), "GraphML_Data");
+            XLSX.writeFile(wb, "WarsawGhetto_SNA_ML_Features.xlsx");
+        });
+
+        // --- TAB 4: Correlation Matrix Heatmap & Auto Insights ---
+        function buildCorrelationMatrix() {
+            if (AppState.processedData.tableData.length === 0) return;
+            const container = document.getElementById('heatmap-container');
+            container.innerHTML = '';
+            
+            const width = Math.max(300, container.clientWidth || 800);
+            const height = Math.max(300, container.clientHeight || 400);
+            const margin = {top: 20, right: 100, bottom: 100, left: 20};
+
+            const innerWidth = Math.max(10, width - margin.left - margin.right);
+            const innerHeight = Math.max(10, height - margin.top - margin.bottom);
+
+            const featureLetters = [
+                ...DashboardColumns.causeRequired,
+                ...DashboardColumns.causeOptional,
+                ...DashboardColumns.result
+            ];
+            const features = featureLetters.map(letter => ({
+                key: getColumnKey(letter),
+                label: getColumnDisplayName(letter)
+            }));
+
+            let matrixData = [];
+            let correlationsList = [];
+
+            for(let i=0; i<features.length; i++) {
+                for(let j=0; j<features.length; j++) {
+                    let v = 1.0; 
+                    if(i !== j) {
+                        let crossTab = {}; let total = 0;
+                        AppState.processedData.tableData.forEach(d => {
+                            let valI = d.rawRow[features[i].key] ? String(d.rawRow[features[i].key]).trim() : 'Unknown';
+                            let valJ = d.rawRow[features[j].key] ? String(d.rawRow[features[j].key]).trim() : 'Unknown';
+                            if(!crossTab[valI]) crossTab[valI] = {};
+                            crossTab[valI][valJ] = (crossTab[valI][valJ] || 0) + 1;
+                            total++;
+                        });
+                        let xLabels = Object.keys(crossTab);
+                        let yLabels = Array.from(new Set(xLabels.flatMap(x => Object.keys(crossTab[x]))));
+                        v = computeCramersV(xLabels, yLabels, crossTab, total);
+                        
+                        if (j > i) correlationsList.push({f1: features[i].label, f2: features[j].label, score: v});
+                    }
+                    matrixData.push({x: features[i].label, y: features[j].label, value: v});
+                }
+            }
+
+            const svg = d3.select("#heatmap-container").append("svg").attr("width", width).attr("height", height)
+                .append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+            const labels = features.map(d => d.label);
+            const x = d3.scaleBand().range([innerWidth, 0]).domain(labels).padding(0.05);
+            const y = d3.scaleBand().range([0, innerHeight]).domain(labels).padding(0.05);
+            const colorScale = d3.scaleSequential().interpolator(d3.interpolateBlues).domain([0, 1]);
+            const tooltip = d3.select("#heatmap-tooltip");
+
+            svg.append("g").attr("transform", `translate(0,${innerHeight})`).call(d3.axisBottom(x).tickSize(0))
+                .selectAll("text").style("text-anchor", "start").attr("dx", "-0.8em").attr("dy", "0.5em").attr("transform", "rotate(-45)")
+                .style("font-family", "Rubik").style("font-size", "11px");
+
+            svg.append("g").attr("transform", `translate(${innerWidth},0)`).call(d3.axisRight(y).tickSize(0))
+                .selectAll("text").style("font-family", "Rubik").style("font-size", "11px");
+
+            svg.selectAll(".domain").remove();
+
+            svg.selectAll().data(matrixData, d => d.x+':'+d.y).enter().append("rect")
+                .attr("x", d => x(d.x)).attr("y", d => y(d.y)).attr("width", x.bandwidth() ).attr("height", y.bandwidth() )
+                .style("fill", d => colorScale(d.value)).attr("class", "heatmap-cell").attr("rx", 4).attr("ry", 4)
+                .on("mouseover", (event, d) => {
+                    tooltip.style("opacity", 1).html(`<b>${d.x}</b> ↔ <b>${d.y}</b><br>${t('js_corr')} ${d.value.toFixed(3)}`)
+                        .style("left", (event.pageX + 10) + "px").style("top", (event.pageY - 20) + "px");
+                })
+                .on("mouseout", () => tooltip.style("opacity", 0));
+
+            svg.selectAll().data(matrixData).enter().append("text")
+                .attr("x", d => x(d.x) + x.bandwidth() / 2).attr("y", d => y(d.y) + y.bandwidth() / 2)
+                .attr("text-anchor", "middle").attr("dominant-baseline", "middle")
+                .style("fill", d => d.value > 0.5 ? "white" : "#333").style("font-size", "10px").style("pointer-events", "none")
+                .text(d => d.value.toFixed(2));
+
+            correlationsList.sort((a,b) => b.score - a.score);
+            document.getElementById('auto-insights-container').innerHTML = correlationsList.slice(0, 3).map((corr, idx) => `
+                <div class="bg-amber-50 border border-amber-200 p-4 rounded-lg flex gap-4 items-start shadow-sm">
+                    <div class="bg-amber-200 text-amber-800 font-bold rounded-full w-8 h-8 flex items-center justify-center shrink-0">${idx+1}</div>
+                    <div>
+                        <h3 class="font-bold text-amber-900 mb-1">
+                            ${t('js_insight_head').replace('{f1}', corr.f1).replace('{f2}', corr.f2)}
+                        </h3>
+                        <p class="text-sm text-amber-800">
+                            ${t('js_insight_body').replace('{s}', corr.score.toFixed(3))}
+                        </p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Initialize UI controls even before loading data.
+        populateColumnDrivenControls();
+    </script>
+</body>
+</html>
