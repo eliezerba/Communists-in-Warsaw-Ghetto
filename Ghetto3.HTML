@@ -23,6 +23,7 @@
         .node { stroke: #fff; stroke-width: 1.5px; cursor: pointer; transition: stroke-width 0.2s; }
         .node:hover { stroke: #1e293b; stroke-width: 3px; }
         .link { stroke: #cbd5e1; stroke-opacity: 0.6; }
+        .link-external { stroke: #f87171; stroke-opacity: 0.5; stroke-dasharray: 5,3; }
         .node-label { font-size: 10px; font-family: 'Rubik'; pointer-events: none; fill: #333; text-shadow: 1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff; }
         #tooltip { position: absolute; opacity: 0; background: rgba(255, 255, 255, 0.95); border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; pointer-events: none; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); font-size: 0.875rem; z-index: 100; min-width: 250px; max-width: 300px; }
         ::-webkit-scrollbar { width: 8px; height: 8px; }
@@ -270,6 +271,17 @@
                                     <span class="font-medium text-rose-800" data-i18n="external_net">חיצונית (אנשי קשר)</span>
                                 </div>
                             </div>
+                            <h4 class="text-xs font-bold text-slate-700 mb-1 mt-2" data-i18n="legend_edges">סוג קשר (Edge)</h4>
+                            <div class="text-xs space-y-2">
+                                <div class="flex items-center gap-2">
+                                    <svg width="24" height="6"><line x1="0" y1="3" x2="24" y2="3" stroke="#cbd5e1" stroke-width="2"/></svg>
+                                    <span class="font-medium text-slate-600" data-i18n="edge_internal">קשר פנימי</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <svg width="24" height="6"><line x1="0" y1="3" x2="24" y2="3" stroke="#f87171" stroke-width="2" stroke-dasharray="5,3"/></svg>
+                                    <span class="font-medium text-rose-600" data-i18n="edge_external">קשר חיצוני</span>
+                                </div>
+                            </div>
                         </div>
                         <div id="network-container" class="w-full h-full min-h-[500px] cursor-move flex items-center justify-center bg-slate-50/30"></div>
                     </div>
@@ -481,6 +493,9 @@
                 legend_shape: "סוג רשת (Shape)",
                 internal_net: "פנימית (גיבורים)",
                 external_net: "חיצונית (אנשי קשר)",
+                legend_edges: "סוג קשר (Edge)",
+                edge_internal: "קשר פנימי",
+                edge_external: "קשר חיצוני",
                 homophily_title: "מדד הומופיליה (Homophily)",
                 homophily_desc: "״דומה מושך דומה״: בודק האם קשרים נוטים להיווצר בין אנשים בעלי רקע זהה.",
                 homophily_var: "בדוק נטייה קהילתית לפי:",
@@ -600,6 +615,9 @@
                 legend_shape: "Network Type (Shape)",
                 internal_net: "Internal (Protagonists)",
                 external_net: "External (Contacts)",
+                legend_edges: "Edge Type",
+                edge_internal: "Internal Edge",
+                edge_external: "External Edge",
                 homophily_title: "Homophily Metric",
                 homophily_desc: "'Birds of a feather': Checks if connections tend to form between similar people.",
                 homophily_var: "Test community tendency by:",
@@ -803,7 +821,7 @@
         }
 
         function buildDetectedSchema() {
-            return {
+            const schema = {
                 protagonistId: findHeaderLetter([/serial/i, /^id$/i, /serial\s*no/i], 'A'),
                 firstName: findHeaderLetter([/first\s*name/i, /^name$/i], 'B'),
                 surname: findHeaderLetter([/surname/i, /last\s*name/i, /family\s*name/i], 'C'),
@@ -817,15 +835,19 @@
                 directContacts: findHeaderLetter([/direct\s*contacts/i], ''),
                 externalContacts: findHeaderLetter([/non-communist/i, /non-jewish/i, /seperate\s*tab/i], '')
             };
+            console.log('Sheet 1 detected schema:', schema);
+            console.log('Sheet 1 headers:', AppState.protagonistHeaderByLetter);
+            return schema;
         }
 
-        function parseSheetWithColumnAliases(sheet) {
+        function parseSheetWithColumnAliases(sheet, minHeaderCells) {
+            const minCells = minHeaderCells || 3;
             const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
             if (!rows || rows.length === 0) return { rows: [], headerByLetter: {} };
 
             const headerRowIndex = rows.findIndex(rowArr => {
                 const nonEmptyCells = (rowArr || []).filter(v => String(v || '').trim() !== '').length;
-                return nonEmptyCells >= 3;
+                return nonEmptyCells >= minCells;
             });
             if (headerRowIndex < 0) return { rows: [], headerByLetter: {} };
 
@@ -846,6 +868,9 @@
                     obj[getColumnKey(letter)] = value;
                 });
                 return obj;
+            }).filter(obj => {
+                // Skip completely empty rows
+                return Object.values(obj).some(v => v != null && String(v).trim() !== '');
             });
 
             return { rows: parsedRows, headerByLetter };
@@ -1177,12 +1202,28 @@
             if (!workbook.SheetNames || workbook.SheetNames.length === 0) throw new Error(t('js_error_empty'));
 
             const protagonistsSheetName = workbook.SheetNames[0];
-            const contactsSheetName = workbook.SheetNames.length > 1 ? workbook.SheetNames[1] : null;
+
+            // Find contacts sheet by name pattern (not by index — it may not be Sheet 2)
+            console.log('All sheet names:', workbook.SheetNames);
+            const contactsSheetName = workbook.SheetNames.find(name => {
+                const n = name.toLowerCase();
+                return /other\s*direct/i.test(n) || /external/i.test(n) || /contacts/i.test(n) ||
+                       /non.?communist/i.test(n) || /non.?jewish/i.test(n);
+            }) || null;
+            console.log('Contacts sheet identified:', contactsSheetName);
 
             const protagonistsParsed = parseSheetWithColumnAliases(workbook.Sheets[protagonistsSheetName]);
             AppState.rawProtagonists = protagonistsParsed.rows;
             AppState.protagonistHeaderByLetter = protagonistsParsed.headerByLetter;
-            AppState.rawContacts = contactsSheetName ? XLSX.utils.sheet_to_json(workbook.Sheets[contactsSheetName]) : [];
+            AppState.rawContacts = [];
+            AppState.rawContactsHeaders = null;
+            if (contactsSheetName) {
+                // Parse Sheet 2 with same column-letter approach, lower threshold (may have fewer columns)
+                const contactsParsed = parseSheetWithColumnAliases(workbook.Sheets[contactsSheetName], 2);
+                AppState.rawContacts = contactsParsed.rows;
+                AppState.rawContactsHeaders = contactsParsed.headerByLetter;
+                console.log('Sheet 2 loaded:', { rowCount: contactsParsed.rows.length, headers: contactsParsed.headerByLetter });
+            }
             AppState.protagonistDetailsById = parseProtagonistDetailsMap(workbook);
             AppState.locationsData = parseLocationsSheet(workbook);
             populateColumnDrivenControls();
@@ -1342,7 +1383,9 @@
 
             // 1. Parse Nodes with schema detection + column-letter fallbacks.
             AppState.rawProtagonists.forEach((row, rowIndex) => {
-                const id = getSafeId(getCellByLetter(row, schema.protagonistId, rowIndex + 1));
+                // Only use explicit serial number from the column — never fall back to row index
+                const rawId = getCellByLetter(row, schema.protagonistId, '');
+                const id = getSafeId(rawId);
                 if (!id) return;
 
                 const firstName = String(getCellByLetter(row, schema.firstName, '') || '').trim();
@@ -1367,50 +1410,98 @@
                 adjList.set(id, new Set());
             });
 
-            if (AppState.rawContacts) {
+            if (AppState.rawContacts && AppState.rawContacts.length > 0) {
+                // Detect Sheet 2 schema using same header-letter approach as Sheet 1
+                const contactHeaders = AppState.rawContactsHeaders || {};
+                const findContactCol = (regexList, fallback) => {
+                    for (const [letter, header] of Object.entries(contactHeaders)) {
+                        for (const rx of regexList) { if (rx.test(header)) return letter; }
+                    }
+                    return fallback;
+                };
+                const cIdLetter = findContactCol([/serial/i, /^id$/i, /serial\s*no/i, /^no\.?$/i], 'A');
+                const cFirstNameLetter = findContactCol([/first\s*name/i, /^name$/i], 'B');
+                const cSurnameLetter = findContactCol([/surname/i, /last\s*name/i, /family/i], 'C');
+                const cCatLetter = findContactCol([/^category$/i, /category/i], 'D');
+
+                console.log('Sheet 2 schema:', { id: cIdLetter, firstName: cFirstNameLetter, surname: cSurnameLetter, category: cCatLetter, headers: contactHeaders });
+                console.log('Sheet 2 raw rows (first 3):', AppState.rawContacts.slice(0, 3));
+                console.log('Sheet 2 row count:', AppState.rawContacts.length);
+                if (AppState.rawContacts.length > 0) {
+                    const sampleRow = AppState.rawContacts[0];
+                    console.log('Sheet 2 first row keys:', Object.keys(sampleRow));
+                    console.log('Sheet 2 first row __COL_A:', sampleRow['__COL_A'], '__COL_B:', sampleRow['__COL_B'], '__COL_C:', sampleRow['__COL_C']);
+                }
+
                 AppState.rawContacts.forEach(row => {
-                    const id = getSafeId(row['ID']);
-                    if (!id || nodesMap.has(id)) return;
+                    const id = getSafeId(getCellByLetter(row, cIdLetter, ''));
+                    if (!id) return;
+
+                    const firstName = String(getCellByLetter(row, cFirstNameLetter, '') || '').trim();
+                    const surname = String(getCellByLetter(row, cSurnameLetter, '') || '').trim();
+                    const fullName = [firstName, surname].filter(Boolean).join(' ') || `Contact ${id}`;
+                    const category = String(getCellByLetter(row, cCatLetter, 'External') || 'External').trim();
+
+                    // If this ID already exists as a real protagonist (with actual name), skip
+                    const existing = nodesMap.get(id);
+                    if (existing && existing.type === 'protagonist' && existing.name !== `Person ${id}`) return;
+
                     nodesMap.set(id, {
-                        id: id, name: row['Name'] || `Contact ${id}`,
+                        id: id, name: fullName,
                         type: 'external',
-                        category: String(row['Category'] || 'External').trim(),
+                        category: category,
                         gender: 'Unknown', education: 'Unknown', affiliation: 'Unknown', zob: 'Unknown', rawRow: row,
                         furtherInfo: '',
                         degree: 0, betweenness: 0, pagerank: 0, kcore: 0, community: 0
                     });
-                    adjList.set(id, new Set());
+                    if (!adjList.has(id)) adjList.set(id, new Set());
                 });
+                console.log('External contacts loaded:', [...nodesMap.values()].filter(n => n.type === 'external').length);
             }
 
             // 2. Parse Links (if contact columns are present).
-            const addEdge = (u, v) => {
+            const addEdge = (u, v, linkType) => {
                 if (u && v && u !== v && nodesMap.has(u) && nodesMap.has(v)) {
                     if (!adjList.get(u).has(v)) {
                         adjList.get(u).add(v);
                         adjList.get(v).add(u);
-                        links.push({ source: u, target: v });
+                        links.push({ source: u, target: v, type: linkType });
                     }
                 }
             };
 
             AppState.rawProtagonists.forEach((row, rowIndex) => {
-                const u = getSafeId(getCellByLetter(row, schema.protagonistId, rowIndex + 1));
+                const u = getSafeId(getCellByLetter(row, schema.protagonistId, ''));
                 if (!u) return;
 
-                const contactValues = [
-                    getCellByLetter(row, schema.directContacts, ''),
-                    getCellByLetter(row, schema.externalContacts, '')
-                ];
+                // Internal contacts (protagonist-to-protagonist)
+                const internalContacts = getCellByLetter(row, schema.directContacts, '');
+                if (internalContacts != null && String(internalContacts).trim() !== '') {
+                    String(internalContacts).split(/[,;]/).forEach(v => addEdge(u, getSafeId(v), 'internal'));
+                }
 
-                contactValues.forEach(contacts => {
-                    if (contacts != null && String(contacts).trim() !== '') {
-                        String(contacts).split(/[,;]/).forEach(v => addEdge(u, getSafeId(v)));
-                    }
-                });
+                // External contacts (protagonist-to-external from Other direct contacts tab)
+                const externalContacts = getCellByLetter(row, schema.externalContacts, '');
+                if (externalContacts != null && String(externalContacts).trim() !== '') {
+                    const extIds = String(externalContacts).split(/[,;]/).map(v => getSafeId(v)).filter(Boolean);
+                    extIds.forEach(v => {
+                        if (!nodesMap.has(v)) {
+                            console.warn(`External edge FAILED: protagonist ${u} -> contact ${v} (contact not in nodesMap)`);
+                        }
+                        addEdge(u, v, 'external');
+                    });
+                }
             });
 
             const nodesArr = Array.from(nodesMap.values());
+            console.log('Network summary:', {
+                totalNodes: nodesArr.length,
+                protagonists: nodesArr.filter(n => n.type === 'protagonist').length,
+                externalContacts: nodesArr.filter(n => n.type === 'external').length,
+                totalLinks: links.length,
+                internalLinks: links.filter(l => l.type === 'internal').length,
+                externalLinks: links.filter(l => l.type === 'external').length
+            });
             AppState.nodesMap = nodesMap;
             AppState.adjList = adjList;
             AppState.processedData.links = links;
@@ -1871,7 +1962,8 @@
                 .force("center", d3.forceCenter(width / 2, height / 2))
                 .force("collide", d3.forceCollide().radius(d => getRadius(d) + 4));
 
-            const link = g.append("g").selectAll("line").data(links).join("line").attr("class", "link");
+            const link = g.append("g").selectAll("line").data(links).join("line")
+                .attr("class", d => d.type === 'external' ? 'link link-external' : 'link');
 
             const node = g.append("g").selectAll("path").data(nodes).join("path")
                 .attr("class", "node")
