@@ -23,7 +23,6 @@
         .node { stroke: #fff; stroke-width: 1.5px; cursor: pointer; transition: stroke-width 0.2s; }
         .node:hover { stroke: #1e293b; stroke-width: 3px; }
         .link { stroke: #cbd5e1; stroke-opacity: 0.6; }
-        .link-external { stroke: #f87171; stroke-opacity: 0.5; stroke-dasharray: 5,3; }
         .node-label { font-size: 10px; font-family: 'Rubik'; pointer-events: none; fill: #333; text-shadow: 1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff; }
         #tooltip { position: absolute; opacity: 0; background: rgba(255, 255, 255, 0.95); border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; pointer-events: none; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); font-size: 0.875rem; z-index: 100; min-width: 250px; max-width: 300px; }
         ::-webkit-scrollbar { width: 8px; height: 8px; }
@@ -69,9 +68,9 @@
                         <div class="grid grid-cols-1 md:grid-cols-4 gap-2 items-center">
                             <div>
                                 <input type="file" id="file-excel" accept=".xlsx, .xls" class="hidden">
-                                <label for="file-excel" id="btn-choose-excel" class="w-full h-10 bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium rounded-md border border-blue-200 transition-colors flex items-center justify-center gap-2 cursor-pointer">
+                                <button id="btn-choose-excel" class="w-full h-10 bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium rounded-md border border-blue-200 transition-colors flex items-center justify-center gap-2">
                                     <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> <span data-i18n="btn_choose_excel">בחר קובץ אקסל</span>
-                                </label>
+                                </button>
                             </div>
                             <div>
                                 <input type="url" id="drive-url" placeholder="https://drive.google.com/file/d/.../view" class="w-full h-10 border border-slate-300 rounded-md px-3 text-sm bg-white truncate" dir="ltr">
@@ -109,9 +108,6 @@
                     <button class="tab-btn text-slate-500 hover:text-slate-700 pb-3 px-1 whitespace-nowrap text-sm font-medium transition-colors" data-target="tab-locations">
                         <i data-lucide="map-pin" class="w-4 h-4 inline me-1"></i><span data-i18n="tab_5">5. מיקומים</span>
                     </button>
-                    <button class="tab-btn text-slate-500 hover:text-slate-700 pb-3 px-1 whitespace-nowrap text-sm font-medium transition-colors" data-target="tab-birthyear">
-                        <i data-lucide="calendar" class="w-4 h-4 inline me-1"></i><span data-i18n="tab_6">6. שנת לידה</span>
-                    </button>
                 </div>
             </div>
         </div>
@@ -132,10 +128,21 @@
                     <p class="text-xs text-slate-500 mb-3" data-i18n="opt_desc">בחר משתנה יעד ובדוק אילו נתוני רקע מנבאים אותו בצורה הטובה ביותר.</p>
                     
                     <label class="block text-sm font-bold text-slate-700 mb-1" data-i18n="target_var">משתנה יעד לבדיקה:</label>
-                    <select id="stat-target-var" class="w-full border border-slate-300 rounded-md p-1.5 text-sm bg-slate-50 mb-3 shadow-sm"></select>
+                    <select id="stat-target-var" class="w-full border border-slate-300 rounded-md p-1.5 text-sm bg-slate-50 mb-3 shadow-sm">
+                        <option value="ŻOB" data-i18n="opt_zob">חברות באי"ל (ŻOB)</option>
+                        <option value="Aryan side" data-i18n="opt_aryan">מעבר לצד הארי</option>
+                        <option value="GL" data-i18n="opt_gl">חברות במחתרת הפולנית</option>
+                    </select>
                     
                     <label class="block text-sm font-bold text-slate-700 mb-1" data-i18n="bg_vars">נתוני רקע להשוואה מולו:</label>
-                    <div id="features-container" class="bg-slate-50 border border-slate-200 rounded p-3 mb-4 max-h-40 overflow-y-auto text-sm space-y-2 shadow-inner"></div>
+                    <div class="bg-slate-50 border border-slate-200 rounded p-3 mb-4 max-h-40 overflow-y-auto text-sm space-y-2 shadow-inner">
+                        <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-100 p-0.5 rounded"><input type="checkbox" class="feature-cb" value="Gender" checked> <span data-i18n="opt_gender">מגדר (Gender)</span></label>
+                        <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-100 p-0.5 rounded"><input type="checkbox" class="feature-cb" value="education - low / mid / high" checked> <span data-i18n="opt_edu">רמת השכלה</span></label>
+                        <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-100 p-0.5 rounded"><input type="checkbox" class="feature-cb" value="former political affiliation" checked> <span data-i18n="opt_affil">שיוך פוליטי קודם</span></label>
+                        <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-100 p-0.5 rounded"><input type="checkbox" class="feature-cb" value="Category" checked> <span data-i18n="opt_cat">קטגוריית רקע</span></label>
+                        <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-100 p-0.5 rounded"><input type="checkbox" class="feature-cb" value="family - socio-economic status: low / mid / high"> <span data-i18n="opt_socio">רקע כלכלי</span></label>
+                        <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-100 p-0.5 rounded"><input type="checkbox" class="feature-cb" value="family - cultural charachter: traditional / national / integration"> <span data-i18n="opt_cult">נטייה תרבותית משפחתית</span></label>
+                    </div>
 
                     <button id="btn-calc-weights" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 rounded transition-colors text-sm mb-4 shadow-sm flex items-center justify-center gap-2">
                         <i data-lucide="calculator" class="w-4 h-4"></i> <span data-i18n="btn_calc_weights">חשב משקולות ניבוי</span>
@@ -156,11 +163,19 @@
                     <div class="grid grid-cols-2 gap-4 mb-4">
                         <div>
                             <label class="block text-xs font-medium text-slate-500 mb-1" data-i18n="axis_x">ציר X (משתנה מסביר)</label>
-                            <select id="stat-var-x" class="w-full border border-slate-300 rounded p-1.5 text-sm"></select>
+                            <select id="stat-var-x" class="w-full border border-slate-300 rounded p-1.5 text-sm">
+                                <option value="Gender" data-i18n="opt_gender">מגדר (Gender)</option>
+                                <option value="education - low / mid / high" data-i18n="opt_edu">רמת השכלה</option>
+                                <option value="former political affiliation" data-i18n="opt_affil">שיוך פוליטי</option>
+                                <option value="Category" data-i18n="opt_cat">קטגוריית רקע</option>
+                            </select>
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-slate-500 mb-1" data-i18n="axis_y">ציר Y (התפלגות תצפיות)</label>
-                            <select id="stat-var-y" class="w-full border border-slate-300 rounded p-1.5 text-sm"></select>
+                            <select id="stat-var-y" class="w-full border border-slate-300 rounded p-1.5 text-sm">
+                                <option value="Aryan side" data-i18n="opt_aryan">מעבר לצד הארי</option>
+                                <option value="ŻOB" data-i18n="opt_zob">חברות באי"ל</option>
+                            </select>
                         </div>
                     </div>
                     <div class="relative flex-1 w-full h-full min-h-[300px]" dir="ltr">
@@ -197,51 +212,17 @@
                                 </div>
 
                                 <div>
-                                    <div class="flex items-center gap-2 mb-1 mt-4">
-                                        <label class="block text-sm font-medium text-slate-700" data-i18n="node_color">צבע צומת (קיבוץ):</label>
-                                        <button class="info-btn text-xs bg-slate-100 hover:bg-blue-100 text-slate-600 px-1.5 py-0.5 rounded transition" title="בחירת מדד קיבוץ: קהילות (דגם פיתופיזי), K-Core (גרעין), או תכונות סטטיות"><i data-lucide="help-circle" class="w-3 h-3"></i></button>
-                                    </div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1 mt-4" data-i18n="node_color">צבע צומת (קיבוץ):</label>
                                     <select id="net-color-by" class="w-full border border-slate-300 rounded-md p-1.5 text-sm bg-slate-50">
-                                        <option value="community">Communities (Clusters) - קהילות</option>
-                                        <option value="kcore">K-Core (Network Core) - גרעין רשת</option>
+                                        <option value="community">Communities (Clusters)</option>
+                                        <option value="kcore">K-Core (Network Core)</option>
+                                        <option value="category" data-i18n="opt_cat">קטגוריית רקע</option>
+                                        <option value="zob" data-i18n="opt_zob">חברות באי"ל</option>
+                                        <option value="affiliation" data-i18n="opt_affil">שיוך פוליטי</option>
                                     </select>
                                     <div class="flex gap-2 mt-2">
                                         <button class="info-btn text-xs bg-slate-100 hover:bg-blue-100 text-slate-600 px-2 py-1 rounded transition" data-term="community">Communities</button>
                                         <button class="info-btn text-xs bg-slate-100 hover:bg-blue-100 text-slate-600 px-2 py-1 rounded transition" data-term="kcore">K-Core</button>
-                                    </div>
-                                    
-                                    <!-- I: קהילות - מודל Label Propagation המדברק צמתים לקבוצות על בסיס טופולוגיית הרשת (קשרים בין אדםים) -->
-                                    <div id="communities-subsection" class="hidden mt-4 p-3 bg-rose-50 border border-rose-200 rounded">
-                                        <h4 class="text-xs font-bold text-rose-900 mb-2 flex items-center gap-1">
-                                            <i data-lucide="users" class="w-4 h-4 text-rose-600"></i>
-                                            פרופיל קהילות (כשבוחרים Communities)
-                                            <button class="ml-auto text-xs text-rose-600 hover:text-rose-800 transition" title="I: מספר קהילות (K) - כמה קבוצות לעקוב. מינ=2, מקס=20. L במודל Label Propagation: כל צומת מקבל תוויות מן השכנים. Iterate 15 פעמים להתכנסות"><i data-lucide="info" class="w-3.5 h-3.5"></i></button>
-                                        </h4>
-                                        <div class="space-y-2">
-                                            <div>
-                                                <label class="block text-xs font-medium text-rose-900 mb-1">מספר קהילות (K):</label>
-                                                <div class="flex gap-2 items-center">
-                                                    <input type="number" id="community-count-slider" min="2" max="20" value="5" class="flex-1 border border-rose-300 rounded px-2 py-1.5 text-xs">
-                                                    <button id="btn-recalc-communities" class="text-xs bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded transition font-medium">עדכן</button>
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <label class="block text-xs font-medium text-rose-900 mb-1">צבעי קהילות לפי קריטריון:</label>
-                                                <select id="community-attr-selector" class="w-full border border-rose-300 rounded p-1.5 text-xs bg-white mb-2">
-                                                    <option value="community">קהילות (ברירת מחדל)</option>
-                                                </select>
-                                                <button id="btn-apply-community-attr" class="w-full text-xs bg-rose-600 hover:bg-rose-700 text-white px-2 py-1.5 rounded transition font-medium">עדכן צביעה</button>
-                                            </div>
-                                            <div>
-                                                <label class="block text-xs font-medium text-rose-900 mb-1">בחר קהילה לתצוגת פרטים:</label>
-                                                <select id="community-selector" class="w-full border border-rose-300 rounded p-1.5 text-xs bg-white">
-                                                    <option value="">בחר קהילה...</option>
-                                                </select>
-                                            </div>
-                                            <div id="community-profile" class="text-xs text-rose-800 bg-white rounded p-2 max-h-[250px] overflow-y-auto hidden border border-rose-200">
-                                                <p class="text-rose-600 text-center py-2">בחר קהילה כדי לראות רכבי אנשים ודגמי סיבה/תוצאה</p>
-                                            </div>
-                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -253,8 +234,6 @@
                                 <ul id="top-nodes-list" class="text-sm space-y-1"></ul>
                             </div>
                         </div>
-
-
                     </div>
 
                     <!-- Network Canvas -->
@@ -272,17 +251,6 @@
                                 <div class="flex items-center gap-2">
                                     <svg width="12" height="12"><rect x="1" y="1" width="10" height="10" fill="#64748b" stroke="#fff" stroke-width="1"/></svg> 
                                     <span class="font-medium text-rose-800" data-i18n="external_net">חיצונית (אנשי קשר)</span>
-                                </div>
-                            </div>
-                            <h4 class="text-xs font-bold text-slate-700 mb-1 mt-2" data-i18n="legend_edges">סוג קשר (Edge)</h4>
-                            <div class="text-xs space-y-2">
-                                <div class="flex items-center gap-2">
-                                    <svg width="24" height="6"><line x1="0" y1="3" x2="24" y2="3" stroke="#cbd5e1" stroke-width="2"/></svg>
-                                    <span class="font-medium text-slate-600" data-i18n="edge_internal">קשר פנימי</span>
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <svg width="24" height="6"><line x1="0" y1="3" x2="24" y2="3" stroke="#f87171" stroke-width="2" stroke-dasharray="5,3"/></svg>
-                                    <span class="font-medium text-rose-600" data-i18n="edge_external">קשר חיצוני</span>
                                 </div>
                             </div>
                         </div>
@@ -304,7 +272,11 @@
                         <div class="flex items-end gap-2 mt-auto">
                             <div class="flex-1">
                                 <label class="block text-xs text-indigo-300 mb-1" data-i18n="homophily_var">בדוק נטייה קהילתית לפי:</label>
-                                <select id="homophily-var" class="w-full bg-indigo-800 border-indigo-700 text-sm rounded p-1.5"></select>
+                                <select id="homophily-var" class="w-full bg-indigo-800 border-indigo-700 text-sm rounded p-1.5">
+                                    <option value="former political affiliation" data-i18n="opt_affil">שיוך פוליטי קודם</option>
+                                    <option value="education - low / mid / high" data-i18n="opt_edu">רמת השכלה</option>
+                                    <option value="Gender" data-i18n="opt_gender">מגדר</option>
+                                </select>
                             </div>
                             <button id="btn-calc-homophily" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-1.5 rounded text-sm transition" data-i18n="btn_calc">חשב</button>
                         </div>
@@ -418,88 +390,6 @@
                 </div>
             </div>
 
-            <!-- TAB 6: Birth Year Analysis -->
-            <div id="tab-birthyear" class="tab-content h-full hidden flex flex-col lg:flex-row gap-6">
-                <!-- Component 1: Birth Year Correlations -->
-                <div class="lg:w-2/5 bg-white p-5 rounded-lg border border-slate-200 shadow-sm flex flex-col overflow-hidden">
-                    <h2 class="text-lg font-semibold mb-2 flex items-center gap-2">
-                        <i data-lucide="bar-chart" class="w-5 h-5 text-amber-500"></i>
-                        <span data-i18n="by_corr_title">מתאמים עם שנת לידה</span>
-                    </h2>
-                    <p class="text-xs text-slate-500 mb-3" data-i18n="by_corr_desc">בדוק את עוצמת הקשר בין שנת הלידה לבין כל שדה רקע. לחץ על שורה כדי לראות הצלבה מפורטת ולהגיע לדמויות.</p>
-
-                    <div class="flex items-center gap-2 mb-3">
-                        <label class="text-sm font-medium text-slate-700 shrink-0" data-i18n="by_interval_label">מרווח קיבוץ:</label>
-                        <input type="range" id="by-corr-interval" min="1" max="15" value="5" class="flex-1 accent-amber-600">
-                        <span id="by-corr-interval-display" class="text-sm font-bold text-amber-700 w-20 text-center">5 שנים</span>
-                    </div>
-
-                    <button id="btn-calc-by-corr" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-medium py-2 rounded transition-colors text-sm mb-4 shadow-sm flex items-center justify-center gap-2">
-                        <i data-lucide="calculator" class="w-4 h-4"></i> <span data-i18n="btn_calc_by_corr">חשב מתאמים</span>
-                    </button>
-
-                    <div id="by-corr-results" class="hidden mb-3 overflow-auto max-h-[250px]">
-                        <h3 class="text-sm font-bold text-amber-900 mb-2 border-b border-amber-200 pb-1">Cramér's V (0–1):</h3>
-                        <ul id="by-corr-list" class="space-y-3"></ul>
-                    </div>
-
-                    <div id="by-corr-drilldown" class="hidden flex-1 overflow-auto bg-slate-50 rounded border border-slate-200 p-3">
-                        <div class="flex justify-between items-center mb-2">
-                            <h4 id="by-corr-drilldown-title" class="text-sm font-bold text-slate-800"></h4>
-                            <button id="by-corr-drilldown-close" class="text-xs text-slate-400 hover:text-slate-700 bg-slate-200 rounded-full w-5 h-5 flex items-center justify-center">✕</button>
-                        </div>
-                        <div id="by-corr-drilldown-body"></div>
-                    </div>
-                </div>
-
-                <!-- Component 2: Community + Birth Year Network -->
-                <div class="lg:w-3/5 bg-white p-5 rounded-lg border border-slate-200 shadow-sm flex flex-col overflow-hidden">
-                    <h2 class="text-lg font-semibold mb-2 flex items-center gap-2">
-                        <i data-lucide="network" class="w-5 h-5 text-blue-500"></i>
-                        <span data-i18n="by_net_title">רשת קהילות ושנת לידה</span>
-                    </h2>
-                    <p class="text-xs text-slate-500 mb-3" data-i18n="by_net_desc">מסגרת הצומת מבטאת קהילה, מילוי הצומת מבטא קבוצת שנת לידה. התאם את מרווח הקיבוץ.</p>
-
-                    <div class="flex items-center gap-2 mb-3">
-                        <label class="text-sm font-medium text-slate-700 shrink-0" data-i18n="by_interval_label">מרווח קיבוץ:</label>
-                        <input type="range" id="by-net-interval" min="1" max="15" value="5" class="flex-1 accent-blue-600">
-                        <span id="by-net-interval-display" class="text-sm font-bold text-blue-700 w-20 text-center">5 שנים</span>
-                    </div>
-
-                    <!-- Community count (K) control - same Label Propagation as Tab 2 -->
-                    <div class="flex items-center gap-2 mb-3 p-2 bg-rose-50 border border-rose-200 rounded">
-                        <label class="text-xs font-medium text-rose-900 shrink-0">מספר קהילות (K):</label>
-                        <input type="number" id="by-net-community-k" min="2" max="20" value="5" class="w-16 border border-rose-300 rounded px-2 py-1 text-xs">
-                        <button id="btn-by-net-recalc-communities" class="text-xs bg-rose-600 hover:bg-rose-700 text-white px-3 py-1 rounded transition font-medium">עדכן קהילות</button>
-                        <select id="by-net-community-selector" class="flex-1 border border-rose-300 rounded p-1 text-xs bg-white">
-                            <option value="">לחץ על קהילה לפרטים...</option>
-                        </select>
-                    </div>
-
-                    <div class="flex flex-wrap gap-4 mb-3 text-xs border-b border-slate-100 pb-3">
-                        <div>
-                            <h4 class="font-bold text-slate-700 mb-1" data-i18n="by_fill_legend">צבע מילוי = שנת לידה</h4>
-                            <div id="by-net-legend-fill" class="flex flex-wrap gap-1 max-h-20 overflow-y-auto"></div>
-                        </div>
-                        <div>
-                            <h4 class="font-bold text-slate-700 mb-1" data-i18n="by_stroke_legend">צבע מסגרת = קהילה</h4>
-                            <div id="by-net-legend-stroke" class="flex flex-wrap gap-1 max-h-20 overflow-y-auto"></div>
-                        </div>
-                    </div>
-
-                    <!-- Community profile panel -->
-                    <div id="by-net-community-profile" class="hidden mb-3 text-xs text-rose-800 bg-white rounded p-3 max-h-[200px] overflow-y-auto border border-rose-200">
-                        <div class="flex justify-between items-center mb-1">
-                            <h5 class="font-bold text-rose-900">פרופיל קהילה</h5>
-                            <button id="by-net-community-profile-close" class="text-slate-400 hover:text-slate-700 bg-slate-200 rounded-full w-5 h-5 flex items-center justify-center text-xs">✕</button>
-                        </div>
-                        <div id="by-net-community-profile-body"></div>
-                    </div>
-
-                    <div id="by-network-container" class="flex-1 w-full min-h-[400px] bg-slate-50/30 rounded border border-slate-200 relative overflow-hidden cursor-move"></div>
-                </div>
-            </div>
-
         </div>
     </main>
 
@@ -578,9 +468,6 @@
                 legend_shape: "סוג רשת (Shape)",
                 internal_net: "פנימית (גיבורים)",
                 external_net: "חיצונית (אנשי קשר)",
-                legend_edges: "סוג קשר (Edge)",
-                edge_internal: "קשר פנימי",
-                edge_external: "קשר חיצוני",
                 homophily_title: "מדד הומופיליה (Homophily)",
                 homophily_desc: "״דומה מושך דומה״: בודק האם קשרים נוטים להיווצר בין אנשים בעלי רקע זהה.",
                 homophily_var: "בדוק נטייה קהילתית לפי:",
@@ -650,16 +537,7 @@
                 person_education: "השכלה",
                 person_affiliation: "שיוך פוליטי",
                 person_zob: "חברות ב-ŻOB",
-                person_aryan: "מעבר לצד הארי",
-                tab_6: "6. שנת לידה",
-                by_corr_title: "מתאמים עם שנת לידה",
-                by_corr_desc: "בדוק את עוצמת הקשר בין שנת הלידה לבין כל שדה רקע. לחץ על שורה כדי לראות הצלבה מפורטת ולהגיע לדמויות.",
-                by_net_title: "רשת קהילות ושנת לידה",
-                by_net_desc: "מסגרת הצומת מבטאת קהילה, מילוי הצומת מבטא קבוצת שנת לידה. התאם את מרווח הקיבוץ.",
-                btn_calc_by_corr: "חשב מתאמים",
-                by_interval_label: "מרווח קיבוץ:",
-                by_fill_legend: "צבע מילוי = שנת לידה",
-                by_stroke_legend: "צבע מסגרת = קהילה"
+                person_aryan: "מעבר לצד הארי"
             },
             en: {
                 app_title: "Communists in Warsaw Ghetto - מעבדת אליהו",
@@ -709,9 +587,6 @@
                 legend_shape: "Network Type (Shape)",
                 internal_net: "Internal (Protagonists)",
                 external_net: "External (Contacts)",
-                legend_edges: "Edge Type",
-                edge_internal: "Internal Edge",
-                edge_external: "External Edge",
                 homophily_title: "Homophily Metric",
                 homophily_desc: "'Birds of a feather': Checks if connections tend to form between similar people.",
                 homophily_var: "Test community tendency by:",
@@ -781,16 +656,7 @@
                 person_education: "Education",
                 person_affiliation: "Political Affiliation",
                 person_zob: "ŻOB Membership",
-                person_aryan: "Moved To Aryan Side",
-                tab_6: "6. Birth Year",
-                by_corr_title: "Birth Year Correlations",
-                by_corr_desc: "Check the strength of association between birth year and each background field. Click a row to see cross-tabulation and drill down to individuals.",
-                by_net_title: "Community Network & Birth Year",
-                by_net_desc: "Node border = community, node fill = birth year group. Adjust the grouping interval.",
-                btn_calc_by_corr: "Calculate Correlations",
-                by_interval_label: "Grouping Interval:",
-                by_fill_legend: "Fill Color = Birth Year",
-                by_stroke_legend: "Border Color = Community"
+                person_aryan: "Moved To Aryan Side"
             }
         };
 
@@ -807,7 +673,6 @@
             lang: 'he', // Default language
             rawProtagonists: null,
             rawContacts: null,
-            protagonistHeaderByLetter: {},
             protagonistDetailsById: new Map(),
             locationsData: [],
             nodesMap: new Map(),
@@ -816,190 +681,8 @@
             chartInstance: null,
             networkSimulation: null,
             locationsMap: null,
-            locationsLayer: null,
-            communityColorByAttr: null  // I: לשמור דרך צביעה עם קהילות
+            locationsLayer: null
         };
-
-        const DashboardColumns = {
-            causeRequired: ['E', 'H', 'N', 'O', 'R', 'U', 'W'],
-            causeOptional: ['G'],
-            result: ['AB', 'AC', 'AD', 'AE', 'AF', 'AG', 'AH', 'AI', 'AJ']
-        };
-
-        function columnIndexToLetter(index) {
-            let n = index + 1;
-            let s = '';
-            while (n > 0) {
-                const mod = (n - 1) % 26;
-                s = String.fromCharCode(65 + mod) + s;
-                n = Math.floor((n - 1) / 26);
-            }
-            return s;
-        }
-
-        function getColumnKey(letter) {
-            return `__COL_${letter}`;
-        }
-
-        const headerTranslationHe = {
-            'Serial no.': 'מספר סידורי',
-            'First Name': 'שם פרטי',
-            'Name': 'שם',
-            'Surname': 'שם משפחה',
-            'Full name': 'שם מלא',
-            'Category': 'קטגוריה',
-            'Gender': 'מגדר',
-            'Male / Female / ?': 'מגדר',
-            'Year of Birth': 'שנת לידה',
-            'Birth Date': 'תאריך לידה',
-            'Date of Birth': 'תאריך לידה',
-            'Age in 1943': 'גיל ב-1943',
-            'Age': 'גיל',
-            'Age 1943': 'גיל ב-1943',
-            'education - low / mid / high': 'רמת השכלה',
-            'education': 'רמת השכלה',
-            'Education': 'רמת השכלה',
-            'Low / Mid / High': 'רמת השכלה',
-            'former political affiliation': 'שיוך פוליטי קודם',
-            'affiliation': 'שיוך פוליטי',
-            'Affiliation': 'שיוך פוליטי',
-            'Political affiliation': 'שיוך פוליטי',
-            'Aryan side': 'מעבר לצד הארי',
-            'Aryan': 'צד ארי',
-            'Move to Aryan': 'מעבר לצד הארי',
-            'ŻOB': 'חברות באי"ל',
-            'ZOB': 'חברות באי"ל',
-            'GL': 'חברות במחתרת הפולנית',
-            'Direct contacts (seiral no.)': 'אנשי קשר ישירים',
-            'Direct contacts': 'אנשי קשר',
-            'Contacts': 'אנשי קשר',
-            'Non-Communist or non-Jewish direct contacts (seiral no.-seperate tab)': 'אנשי קשר חיצוניים ישירים',
-            'External contacts': 'אנשי קשר חיצוניים',
-            'External Direct Contacts': 'אנשי קשר חיצוניים',
-            'Family': 'משפחה',
-            'Family members': 'חברי משפחה'
-        };
-
-        function smartTranslateHeader(header) {
-            const key = String(header || '').trim();
-            if (!key) return key;
-            if (headerTranslationHe[key]) return headerTranslationHe[key];
-            if (headerTranslationHe[key.toLowerCase()]) return headerTranslationHe[key.toLowerCase()];
-            for (const [en, he] of Object.entries(headerTranslationHe)) {
-                if (key.toLowerCase().includes(en.toLowerCase())) return he;
-            }
-            return key;
-        }
-
-        function translateHeaderToHebrew(header) {
-            return smartTranslateHeader(header);
-        }
-
-        function getColumnDisplayName(letter) {
-            const header = String(AppState.protagonistHeaderByLetter[letter] || '').trim();
-            if (!header) return AppState.lang === 'he' ? `עמודה ${letter}` : `Column ${letter}`;
-            if (AppState.lang === 'he') {
-                const translated = translateHeaderToHebrew(header);
-                return `${letter} - ${translated}`;
-            }
-            return `${letter} - ${header}`;
-        }
-
-        function findHeaderLetter(regexList, fallbackLetter = '') {
-            const entries = Object.entries(AppState.protagonistHeaderByLetter || {});
-            for (const [letter, rawHeader] of entries) {
-                const header = String(rawHeader || '').trim();
-                if (!header) continue;
-                for (const rx of regexList) {
-                    if (rx.test(header)) return letter;
-                }
-            }
-            return fallbackLetter;
-        }
-
-        function getCellByLetter(row, letter, fallback = '') {
-            if (!letter) return fallback;
-            const value = row[getColumnKey(letter)];
-            return value == null || String(value).trim() === '' ? fallback : value;
-        }
-
-        function buildDetectedSchema() {
-            const schema = {
-                protagonistId: findHeaderLetter([/serial/i, /^id$/i, /serial\s*no/i], 'A'),
-                firstName: findHeaderLetter([/first\s*name/i, /^name$/i], 'B'),
-                surname: findHeaderLetter([/surname/i, /last\s*name/i, /family\s*name/i], 'C'),
-                category: findHeaderLetter([/^category$/i, /category/i], 'D'),
-                gender: findHeaderLetter([/^gender$/i, /gender/i], 'E'),
-                age: findHeaderLetter([/age\s*in\s*1943/i, /^age$/i], 'F'),
-                birthYear: findHeaderLetter([/year\s*of\s*birth/i, /birth\s*year/i, /birth\s*date/i, /שנת\s*לידה/i], 'G'),
-                education: findHeaderLetter([/education/i], 'H'),
-                affiliation: findHeaderLetter([/former\s*political\s*affiliation/i, /affiliation/i], 'N'),
-                aryanSide: findHeaderLetter([/aryan\s*side/i], 'AB'),
-                zob: findHeaderLetter([/żob/i, /zob/i], 'AC'),
-                directContacts: findHeaderLetter([/direct\s*contacts/i], ''),
-                externalContacts: findHeaderLetter([/non-communist/i, /non-jewish/i, /seperate\s*tab/i], '')
-            };
-            console.log('Sheet 1 detected schema:', schema);
-            console.log('Sheet 1 headers:', AppState.protagonistHeaderByLetter);
-            return schema;
-        }
-
-        function parseSheetWithColumnAliases(sheet, minHeaderCells) {
-            const minCells = minHeaderCells || 3;
-            const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-            if (!rows || rows.length === 0) return { rows: [], headerByLetter: {} };
-
-            const headerRowIndex = rows.findIndex(rowArr => {
-                const nonEmptyCells = (rowArr || []).filter(v => String(v || '').trim() !== '').length;
-                return nonEmptyCells >= minCells;
-            });
-            if (headerRowIndex < 0) return { rows: [], headerByLetter: {} };
-
-            const headerRow = rows[headerRowIndex] || [];
-            const headerByLetter = {};
-            headerRow.forEach((headerValue, idx) => {
-                const letter = columnIndexToLetter(idx);
-                headerByLetter[letter] = String(headerValue || '').trim();
-            });
-
-            const parsedRows = rows.slice(headerRowIndex + 1).map(rowArr => {
-                const obj = {};
-                headerRow.forEach((headerValue, idx) => {
-                    const letter = columnIndexToLetter(idx);
-                    const header = String(headerValue || '').trim();
-                    const value = rowArr[idx];
-                    if (header && obj[header] === undefined) obj[header] = value;
-                    obj[getColumnKey(letter)] = value;
-                });
-                return obj;
-            }).filter(obj => {
-                // Skip completely empty rows
-                return Object.values(obj).some(v => v != null && String(v).trim() !== '');
-            });
-
-            return { rows: parsedRows, headerByLetter };
-        }
-
-        function populateColumnDrivenControls() {
-            const featureContainer = document.getElementById('features-container');
-            const targetSelect = document.getElementById('stat-target-var');
-            const xSelect = document.getElementById('stat-var-x');
-            const ySelect = document.getElementById('stat-var-y');
-            const homophilySelect = document.getElementById('homophily-var');
-            if (!featureContainer || !targetSelect || !xSelect || !ySelect || !homophilySelect) return;
-
-            const allCause = [...DashboardColumns.causeRequired, ...DashboardColumns.causeOptional];
-
-            featureContainer.innerHTML = allCause.map(letter => {
-                const checked = DashboardColumns.causeRequired.includes(letter) ? 'checked' : '';
-                return `<label class="flex items-center gap-2 cursor-pointer hover:bg-slate-100 p-0.5 rounded"><input type="checkbox" class="feature-cb" value="${getColumnKey(letter)}" ${checked}> <span>${getColumnDisplayName(letter)}</span></label>`;
-            }).join('');
-
-            targetSelect.innerHTML = DashboardColumns.result.map(letter => `<option value="${getColumnKey(letter)}">${getColumnDisplayName(letter)}</option>`).join('');
-            xSelect.innerHTML = allCause.map(letter => `<option value="${getColumnKey(letter)}">${getColumnDisplayName(letter)}</option>`).join('');
-            ySelect.innerHTML = DashboardColumns.result.map(letter => `<option value="${getColumnKey(letter)}">${getColumnDisplayName(letter)}</option>`).join('');
-            homophilySelect.innerHTML = allCause.map(letter => `<option value="${getColumnKey(letter)}">${getColumnDisplayName(letter)}</option>`).join('');
-        }
 
         // --- Translation Engine ---
         function t(key) {
@@ -1027,16 +710,12 @@
                 if (!hasFile) selectedFileName.innerText = t('no_file_selected');
             }
 
-            // Dynamic controls are column-driven and need to reflect the active language.
-            populateColumnDrivenControls();
-
             // Re-render components if data exists
             if (AppState.processedData.nodes.length > 0) {
                 updateStatsView();
                 initNetworkGraph();
                 updateIntegrativeTable();
                 buildCorrelationMatrix();
-                try { renderBirthYearTab(); } catch(e) {}
             }
             if (AppState.locationsData.length > 0 || document.getElementById('tab-locations')) {
                 renderLocationsTab();
@@ -1087,44 +766,22 @@
 
 
         // --- UI Elements ---
-        let fileInputExcel = null;
-        let btnChooseExcel = null;
-        let selectedFileName = null;
-        let driveUrlInput = null;
-        let btnLoadDrive = null;
-        let btnProcess = null;
-        let statusIcon = null;
-        let statusText = null;
-
-        // I: initialize UI elements אחרי ש-DOM טוען
-        function initializeUIElements() {
-            fileInputExcel = document.getElementById('file-excel');
-            btnChooseExcel = document.getElementById('btn-choose-excel');
-            selectedFileName = document.getElementById('selected-file-name');
-            driveUrlInput = document.getElementById('drive-url');
-            btnLoadDrive = document.getElementById('btn-load-drive');
-            btnProcess = document.getElementById('btn-process');
-            statusIcon = document.getElementById('data-status-icon');
-            statusText = document.getElementById('data-status-text');
-
-            // בדיקת null
-            if (!fileInputExcel || !btnChooseExcel || !selectedFileName || !driveUrlInput || !btnLoadDrive || !btnProcess || !statusIcon || !statusText) {
-                console.error('Error: Some UI elements not found in DOM');
-                return false;
-            }
-
-            return true;
-        }
+        const fileInputExcel = document.getElementById('file-excel');
+        const btnChooseExcel = document.getElementById('btn-choose-excel');
+        const selectedFileName = document.getElementById('selected-file-name');
+        const driveUrlInput = document.getElementById('drive-url');
+        const btnLoadDrive = document.getElementById('btn-load-drive');
+        const btnProcess = document.getElementById('btn-process');
+        const statusIcon = document.getElementById('data-status-icon');
+        const statusText = document.getElementById('data-status-text');
 
         function setStatus(colorClass, message) {
-            if (!statusIcon || !statusText) return;
             statusIcon.classList.remove('bg-red-500', 'bg-yellow-500', 'bg-blue-500', 'bg-green-500');
             statusIcon.classList.add(colorClass);
             statusText.innerText = message;
         }
 
         function updateLoadButtonState() {
-            if (!fileInputExcel || !btnProcess || !btnLoadDrive || !driveUrlInput) return;
             const hasFile = !!(fileInputExcel.files && fileInputExcel.files.length > 0);
             const hasDriveUrl = String(driveUrlInput.value || '').trim().length > 0;
             const canLoadAny = hasFile || hasDriveUrl;
@@ -1145,75 +802,21 @@
         }
 
         function handleFileSelection() {
-            if (!fileInputExcel || !selectedFileName) return;
             const file = fileInputExcel.files && fileInputExcel.files[0] ? fileInputExcel.files[0] : null;
             selectedFileName.innerText = file ? file.name : t('no_file_selected');
             updateLoadButtonState();
         }
 
-        // I: ערך את ה-event listeners - יכול להיות שDB כבר טוען
-        function attachEventListeners() {
-            if (!initializeUIElements()) {
-                console.error('Failed to initialize UI elements');
-                return false;
+        btnChooseExcel.addEventListener('click', () => fileInputExcel.click());
+        fileInputExcel.addEventListener('change', handleFileSelection);
+        fileInputExcel.addEventListener('input', handleFileSelection);
+        driveUrlInput.addEventListener('input', updateLoadButtonState);
+        driveUrlInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' && !btnLoadDrive.disabled) {
+                event.preventDefault();
+                btnLoadDrive.click();
             }
-
-            fileInputExcel.addEventListener('change', handleFileSelection);
-            fileInputExcel.addEventListener('input', handleFileSelection);
-            driveUrlInput.addEventListener('input', updateLoadButtonState);
-            driveUrlInput.addEventListener('keydown', (event) => {
-                if (event.key === 'Enter' && !btnLoadDrive.disabled) {
-                    event.preventDefault();
-                    btnLoadDrive.click();
-                }
-            });
-
-            // I: הוסף event listeners לטעינה מ-Drive וקובץ מקומי
-            btnLoadDrive.addEventListener('click', handleDriveLoad);
-
-            btnProcess.addEventListener('click', async () => {
-                const file = fileInputExcel.files[0];
-
-                if (!file) {
-                    alert(t('js_error_file_required'));
-                    return;
-                }
-
-                setStatus('bg-blue-500', t('js_reading'));
-
-                const reader = new FileReader();
-                
-                reader.onload = function(e) {
-                    try {
-                        parseWorkbookFromArrayBuffer(e.target.result);
-                    } catch(error) {
-                        console.error("Parse error:", error);
-                        alert(t('js_error_parse') + error.message);
-                        setStatus('bg-red-500', 'Error');
-                        return;
-                    }
-
-                    processLoadedWorkbook();
-                };
-
-                reader.onerror = function() {
-                    alert(t('js_error_access'));
-                    setStatus('bg-red-500', 'Error');
-                };
-
-                reader.readAsArrayBuffer(file);
-            });
-
-            updateLoadButtonState();
-            return true;
-        }
-
-        // I: אם DOM כבר טוען - קרא מיד, אחרת חכה ל-DOMContentLoaded
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', attachEventListeners);
-        } else {
-            attachEventListeners();
-        }
+        });
 
         function normalizeKey(value) {
             return String(value || '').trim().toLowerCase();
@@ -1307,31 +910,12 @@
             if (!workbook.SheetNames || workbook.SheetNames.length === 0) throw new Error(t('js_error_empty'));
 
             const protagonistsSheetName = workbook.SheetNames[0];
+            const contactsSheetName = workbook.SheetNames.length > 1 ? workbook.SheetNames[1] : null;
 
-            // Find contacts sheet by name pattern (not by index — it may not be Sheet 2)
-            console.log('All sheet names:', workbook.SheetNames);
-            const contactsSheetName = workbook.SheetNames.find(name => {
-                const n = name.toLowerCase();
-                return /other\s*direct/i.test(n) || /external/i.test(n) || /contacts/i.test(n) ||
-                       /non.?communist/i.test(n) || /non.?jewish/i.test(n);
-            }) || null;
-            console.log('Contacts sheet identified:', contactsSheetName);
-
-            const protagonistsParsed = parseSheetWithColumnAliases(workbook.Sheets[protagonistsSheetName]);
-            AppState.rawProtagonists = protagonistsParsed.rows;
-            AppState.protagonistHeaderByLetter = protagonistsParsed.headerByLetter;
-            AppState.rawContacts = [];
-            AppState.rawContactsHeaders = null;
-            if (contactsSheetName) {
-                // Parse Sheet 2 with same column-letter approach, lower threshold (may have fewer columns)
-                const contactsParsed = parseSheetWithColumnAliases(workbook.Sheets[contactsSheetName], 2);
-                AppState.rawContacts = contactsParsed.rows;
-                AppState.rawContactsHeaders = contactsParsed.headerByLetter;
-                console.log('Sheet 2 loaded:', { rowCount: contactsParsed.rows.length, headers: contactsParsed.headerByLetter });
-            }
+            AppState.rawProtagonists = XLSX.utils.sheet_to_json(workbook.Sheets[protagonistsSheetName]);
+            AppState.rawContacts = contactsSheetName ? XLSX.utils.sheet_to_json(workbook.Sheets[contactsSheetName]) : [];
             AppState.protagonistDetailsById = parseProtagonistDetailsMap(workbook);
             AppState.locationsData = parseLocationsSheet(workbook);
-            populateColumnDrivenControls();
         }
 
         function processLoadedWorkbook() {
@@ -1479,35 +1063,64 @@
             }
         }
 
+        btnLoadDrive.addEventListener('click', handleDriveLoad);
+
+        btnProcess.addEventListener('click', async () => {
+            const file = fileInputExcel.files[0];
+
+            if (!file) {
+                alert(t('js_error_file_required'));
+                return;
+            }
+
+            setStatus('bg-blue-500', t('js_reading'));
+
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                try {
+                    parseWorkbookFromArrayBuffer(e.target.result);
+                } catch(error) {
+                    console.error("Parse error:", error);
+                    alert(t('js_error_parse') + error.message);
+                    setStatus('bg-red-500', 'Error');
+                    return;
+                }
+
+                processLoadedWorkbook();
+            };
+
+            reader.onerror = function() {
+                alert(t('js_error_access'));
+                setStatus('bg-red-500', 'Error');
+            };
+
+            reader.readAsArrayBuffer(file);
+        });
+
+        updateLoadButtonState();
+
         // --- Main Data Pipeline & Algorithms ---
         function buildDataModelAndRunAlgorithms() {
             const nodesMap = new Map();
             const links = [];
             const adjList = new Map();
-            const schema = buildDetectedSchema();
 
-            // 1. Parse Nodes with schema detection + column-letter fallbacks.
-            AppState.rawProtagonists.forEach((row, rowIndex) => {
-                // Only use explicit serial number from the column — never fall back to row index
-                const rawId = getCellByLetter(row, schema.protagonistId, '');
-                const id = getSafeId(rawId);
+            // 1. Parse Nodes
+            AppState.rawProtagonists.forEach(row => {
+                const id = getSafeId(row['Serial no.']);
                 if (!id) return;
-
-                const firstName = String(getCellByLetter(row, schema.firstName, '') || '').trim();
-                const surname = String(getCellByLetter(row, schema.surname, '') || '').trim();
-                const fullName = `${firstName} ${surname}`.trim() || `Person ${id}`;
-
                 nodesMap.set(id, {
                     id: id,
-                    name: fullName,
-                    type: 'protagonist',
-                    category: String(getCellByLetter(row, schema.category, 'Unknown') || 'Unknown').trim(),
-                    gender: String(getCellByLetter(row, schema.gender, 'Unknown') || 'Unknown').trim(),
-                    age: getCellByLetter(row, schema.age, ''),
-                    education: String(getCellByLetter(row, schema.education, 'Unknown') || 'Unknown').trim(),
-                    affiliation: String(getCellByLetter(row, schema.affiliation, 'Unknown') || 'Unknown').trim(),
-                    aryanSide: getCellByLetter(row, schema.aryanSide, '') ? 'Yes' : 'No',
-                    zob: String(getCellByLetter(row, schema.zob, 'No') || 'No').trim(),
+                    name: `${row['First Name'] || ''} ${row['Surname'] || ''}`.trim(),
+                    type: 'protagonist', // Internal Network
+                    category: String(row['Category'] || 'Unknown').trim(),
+                    gender: String(row['Gender'] || row['"Gender"'] || 'Unknown').trim(),
+                    age: row['Age in 1943'] || '',
+                    education: String(row['education - low / mid / high'] || 'Unknown').trim(),
+                    affiliation: String(row['former political affiliation'] || 'Unknown').trim(),
+                    aryanSide: row['Aryan side'] ? 'Yes' : 'No',
+                    zob: String(row['ŻOB'] || 'No').trim(),
                     furtherInfo: AppState.protagonistDetailsById.get(id) || extractFurtherInfoFromRawRow(row) || '',
                     rawRow: row,
                     degree: 0, betweenness: 0, pagerank: 0, kcore: 0, community: 0
@@ -1515,123 +1128,68 @@
                 adjList.set(id, new Set());
             });
 
-            if (AppState.rawContacts && AppState.rawContacts.length > 0) {
-                // Detect Sheet 2 schema using same header-letter approach as Sheet 1
-                const contactHeaders = AppState.rawContactsHeaders || {};
-                const findContactCol = (regexList, fallback) => {
-                    for (const [letter, header] of Object.entries(contactHeaders)) {
-                        for (const rx of regexList) { if (rx.test(header)) return letter; }
-                    }
-                    return fallback;
-                };
-                const cIdLetter = findContactCol([/serial/i, /^id$/i, /serial\s*no/i, /^no\.?$/i], 'A');
-                const cFirstNameLetter = findContactCol([/first\s*name/i, /^name$/i], 'B');
-                const cSurnameLetter = findContactCol([/surname/i, /last\s*name/i, /family/i], 'C');
-                const cCatLetter = findContactCol([/^category$/i, /category/i], 'D');
-
-                console.log('Sheet 2 schema:', { id: cIdLetter, firstName: cFirstNameLetter, surname: cSurnameLetter, category: cCatLetter, headers: contactHeaders });
-                console.log('Sheet 2 raw rows (first 3):', AppState.rawContacts.slice(0, 3));
-                console.log('Sheet 2 row count:', AppState.rawContacts.length);
-                if (AppState.rawContacts.length > 0) {
-                    const sampleRow = AppState.rawContacts[0];
-                    console.log('Sheet 2 first row keys:', Object.keys(sampleRow));
-                    console.log('Sheet 2 first row __COL_A:', sampleRow['__COL_A'], '__COL_B:', sampleRow['__COL_B'], '__COL_C:', sampleRow['__COL_C']);
-                }
-
+            if (AppState.rawContacts) {
                 AppState.rawContacts.forEach(row => {
-                    const id = getSafeId(getCellByLetter(row, cIdLetter, ''));
-                    if (!id) return;
-
-                    const firstName = String(getCellByLetter(row, cFirstNameLetter, '') || '').trim();
-                    const surname = String(getCellByLetter(row, cSurnameLetter, '') || '').trim();
-                    const fullName = [firstName, surname].filter(Boolean).join(' ') || `Contact ${id}`;
-                    const category = String(getCellByLetter(row, cCatLetter, 'External') || 'External').trim();
-
-                    // If this ID already exists as a real protagonist (with actual name), skip
-                    const existing = nodesMap.get(id);
-                    if (existing && existing.type === 'protagonist' && existing.name !== `Person ${id}`) return;
-
+                    const id = getSafeId(row['ID']);
+                    if (!id || nodesMap.has(id)) return;
                     nodesMap.set(id, {
-                        id: id, name: fullName,
-                        type: 'external',
-                        category: category,
+                        id: id, name: row['Name'] || `Contact ${id}`, 
+                        type: 'external', // External Network
+                        category: String(row['Category'] || 'External').trim(),
                         gender: 'Unknown', education: 'Unknown', affiliation: 'Unknown', zob: 'Unknown', rawRow: row,
                         furtherInfo: '',
                         degree: 0, betweenness: 0, pagerank: 0, kcore: 0, community: 0
                     });
-                    if (!adjList.has(id)) adjList.set(id, new Set());
+                    adjList.set(id, new Set());
                 });
-                console.log('External contacts loaded:', [...nodesMap.values()].filter(n => n.type === 'external').length);
             }
 
-            // 2. Parse Links (if contact columns are present).
-            const addEdge = (u, v, linkType) => {
+            // 2. Parse Links
+            const addEdge = (u, v) => {
                 if (u && v && u !== v && nodesMap.has(u) && nodesMap.has(v)) {
                     if (!adjList.get(u).has(v)) {
                         adjList.get(u).add(v);
                         adjList.get(v).add(u);
-                        links.push({ source: u, target: v, type: linkType });
+                        links.push({source: u, target: v});
                     }
                 }
             };
 
-            AppState.rawProtagonists.forEach((row, rowIndex) => {
-                const u = getSafeId(getCellByLetter(row, schema.protagonistId, ''));
+            AppState.rawProtagonists.forEach(row => {
+                const u = getSafeId(row['Serial no.']);
                 if (!u) return;
-
-                // Internal contacts (protagonist-to-protagonist)
-                const internalContacts = getCellByLetter(row, schema.directContacts, '');
-                if (internalContacts != null && String(internalContacts).trim() !== '') {
-                    String(internalContacts).split(/[,;]/).forEach(v => addEdge(u, getSafeId(v), 'internal'));
-                }
-
-                // External contacts (protagonist-to-external from Other direct contacts tab)
-                const externalContacts = getCellByLetter(row, schema.externalContacts, '');
-                if (externalContacts != null && String(externalContacts).trim() !== '') {
-                    const extIds = String(externalContacts).split(/[,;]/).map(v => getSafeId(v)).filter(Boolean);
-                    extIds.forEach(v => {
-                        if (!nodesMap.has(v)) {
-                            console.warn(`External edge FAILED: protagonist ${u} -> contact ${v} (contact not in nodesMap)`);
-                        }
-                        addEdge(u, v, 'external');
-                    });
-                }
+                [row['Direct contacts (seiral no.)'], row['Non-Communist or non-Jewish direct contacts (seiral no.-seperate tab)']]
+                .forEach(contacts => {
+                    if (contacts != null && String(contacts).trim() !== '') {
+                        String(contacts).split(/[,;]/).forEach(v => addEdge(u, getSafeId(v)));
+                    }
+                });
             });
 
             const nodesArr = Array.from(nodesMap.values());
-            console.log('Network summary:', {
-                totalNodes: nodesArr.length,
-                protagonists: nodesArr.filter(n => n.type === 'protagonist').length,
-                externalContacts: nodesArr.filter(n => n.type === 'external').length,
-                totalLinks: links.length,
-                internalLinks: links.filter(l => l.type === 'internal').length,
-                externalLinks: links.filter(l => l.type === 'external').length
-            });
             AppState.nodesMap = nodesMap;
             AppState.adjList = adjList;
             AppState.processedData.links = links;
 
             // Network Algorithms
             nodesArr.forEach(n => n.degree = adjList.get(n.id).size);
-
-            try { calculateBetweenness(nodesArr, adjList); } catch (e) { console.warn('Betweenness err:', e); }
-            try { calculatePageRank(nodesArr, adjList); } catch (e) { console.warn('PageRank err:', e); }
-            try { calculateKCore(nodesArr, adjList); } catch (e) { console.warn('KCore err:', e); }
-            try { calculateCommunities(nodesArr, adjList); } catch (e) { console.warn('Communities err:', e); }
+            
+            try { calculateBetweenness(nodesArr, adjList); } catch(e) { console.warn("Betweenness err:", e); }
+            try { calculatePageRank(nodesArr, adjList); } catch(e) { console.warn("PageRank err:", e); }
+            try { calculateKCore(nodesArr, adjList); } catch(e) { console.warn("KCore err:", e); }
+            try { calculateCommunities(nodesArr, adjList); } catch(e) { console.warn("Communities err:", e); }
 
             AppState.processedData.nodes = nodesArr;
             AppState.processedData.tableData = nodesArr.filter(n => n.type === 'protagonist');
 
             setStatus('bg-green-500', t('js_calc_done').replace('{n}', nodesArr.length));
-            updateCommunitySelector();
-
+            
             // Render UI
-            try { updateStatsView(); } catch (e) { console.warn('Stats view err', e); }
-            try { initNetworkGraph(); } catch (e) { console.warn('Network view err', e); }
-            try { updateIntegrativeTable(); } catch (e) { console.warn('Table view err', e); }
-            try { buildCorrelationMatrix(); } catch (e) { console.warn('Matrix view err', e); }
-            try { renderLocationsTab(); } catch (e) { console.warn('Locations view err', e); }
-            try { renderBirthYearTab(); } catch (e) { console.warn('BirthYear view err', e); }
+            try { updateStatsView(); } catch(e) { console.warn("Stats view err", e); }
+            try { initNetworkGraph(); } catch(e) { console.warn("Network view err", e); }
+            try { updateIntegrativeTable(); } catch(e) { console.warn("Table view err", e); }
+            try { buildCorrelationMatrix(); } catch(e) { console.warn("Matrix view err", e); }
+            try { renderLocationsTab(); } catch(e) { console.warn("Locations view err", e); }
         }
 
         // --- Network Algorithms ---
@@ -1699,13 +1257,9 @@
         }
 
         function calculateCommunities(nodes, adjList) {
-            recalculateCommunitiesWithK(nodes, adjList, 5);
-        }
-        
-        function recalculateCommunitiesWithK(nodes, adjList, k = 5) {
             let labels = {};
             nodes.forEach((n, idx) => labels[n.id] = idx);
-            for (let iter = 0; iter < 15; iter++) {
+            for (let iter = 0; iter < 10; iter++) {
                 let shuffled = [...nodes].sort(() => Math.random() - 0.5);
                 shuffled.forEach(n => {
                     let counts = {};
@@ -1714,100 +1268,15 @@
                         counts[l] = (counts[l] || 0) + 1;
                     });
                     let maxCount = 0; let bestLabel = labels[n.id];
-                    counts[labels[n.id]] = (counts[labels[n.id]] || 0) + 0.1;
+                    counts[labels[n.id]] = (counts[labels[n.id]] || 0) + 0.1; 
                     for (let l in counts) {
                         if (counts[l] > maxCount) { maxCount = counts[l]; bestLabel = l; }
                     }
-                    if (maxCount > 0) labels[n.id] = bestLabel;
+                    if(maxCount > 0) labels[n.id] = bestLabel;
                 });
             }
             let uniqueLabels = [...new Set(Object.values(labels))];
-            let finalLabels = {};
-            uniqueLabels.slice(0, k).forEach((label, idx) => {
-                finalLabels[label] = idx + 1;
-            });
-            nodes.forEach(n => {
-                let origLabel = labels[n.id];
-                // I: קהילות ממוספרות לפי K בדיוק - כל node שלא בחור מקבל K (לא 900)
-                n.community = `קהילה ${finalLabels[origLabel] !== undefined ? finalLabels[origLabel] : k}`;
-            });
-        }
-        
-        function updateCommunitySelector() {
-            const communities = [...new Set(AppState.processedData.nodes.map(n => n.community))].sort();
-            communitySelector.innerHTML = '<option value="">בחר קהילה...</option>' + communities.map(c => `<option value="${c}">${c}</option>`).join('');
-            populateCommunityAttributeSelector();
-        }
-        
-        function populateCommunityAttributeSelector() {
-            // I: Populate dropdown עם כל ה-columns שאפשר לצבוע לפיהם (עמודות סיבה וקטגוריות node)
-            const communityAttrSelector = document.getElementById('community-attr-selector');
-            if (!communityAttrSelector || AppState.processedData.nodes.length === 0) return;
-            
-            const attributes = [
-                { value: 'community', label: 'קהילות (ברירת מחדל)' },
-                { value: 'category', label: 'קטגוריית רקע' },
-                { value: 'zob', label: 'חברות באי"ל' },
-                { value: 'affiliation', label: 'שיוך פוליטי' },
-                { value: 'education', label: 'רמת השכלה' },
-                { value: 'gender', label: 'מגדר' }
-            ];
-            
-            // Add columns from cause attributes
-            const allCauseLetters = [...DashboardColumns.causeRequired, ...DashboardColumns.causeOptional];
-            allCauseLetters.forEach(letter => {
-                attributes.push({ value: getColumnKey(letter), label: `${getColumnDisplayName(letter)} (סיבה)` });
-            });
-            
-            communityAttrSelector.innerHTML = attributes.map(attr => `<option value="${attr.value}">${attr.label}</option>`).join('');
-        }
-        
-        function displayCommunityProfile(communityId) {
-            if (!communityId) return;
-            const membersInCommunity = AppState.processedData.nodes.filter(n => n.community === communityId);
-            if (membersInCommunity.length === 0) {
-                communityProfile.innerHTML = '<p>אין נתונים בקהילה זו</p>';
-                communityProfile.classList.remove('hidden');
-                return;
-            }
-            const memberNames = membersInCommunity.map(n => n.name).join(', ');
-            // I: הצגת פרטי קהילה - שמות חברים + תדירות תכונות
-            let profile = `<div class="font-bold mb-2"><i data-lucide="users" class="w-3 h-3 inline"></i> ${membersInCommunity.length} אדם</div>`;
-            profile += `<div class="text-xs mb-2"><b>שמות:</b><br>${memberNames}</div>`;
-            const schema = buildDetectedSchema();
-            const allCauseLetters = [...DashboardColumns.causeRequired, ...DashboardColumns.causeOptional];
-            const resultLetters = DashboardColumns.result;
-            if (allCauseLetters.length > 0) {
-                profile += '<div class="border-t pt-1 mt-1"><b class="text-xs">תכונות סיבה (רקע):</b><br>';
-                const causeSummary = {};
-                allCauseLetters.forEach(letter => {
-                    const header = AppState.protagonistHeaderByLetter[letter] || letter;
-                    const values = membersInCommunity.map(n => String(getCellByLetter(n.rawRow, letter, '') || '').trim()).filter(v => v);
-                    if (values.length > 0) {
-                        const freqMap = {};
-                        values.forEach(v => freqMap[v] = (freqMap[v] || 0) + 1);
-                        const topVal = Object.entries(freqMap).sort((a, b) => b[1] - a[1])[0];
-                        profile += `<span class="text-xs block">• ${getColumnDisplayName(letter)}: <b>${topVal[0]}</b> (${topVal[1]}/${values.length})</span>`;
-                    }
-                });
-                profile += '</div>';
-            }
-            if (resultLetters.length > 0) {
-                profile += '<div class="border-t pt-1 mt-1"><b class="text-xs">תכונות תוצאה (פעילות):</b><br>';
-                resultLetters.forEach(letter => {
-                    const values = membersInCommunity.map(n => String(getCellByLetter(n.rawRow, letter, '') || '').trim()).filter(v => v);
-                    if (values.length > 0) {
-                        const freqMap = {};
-                        values.forEach(v => freqMap[v] = (freqMap[v] || 0) + 1);
-                        const topVal = Object.entries(freqMap).sort((a, b) => b[1] - a[1])[0];
-                        profile += `<span class="text-xs block">• ${getColumnDisplayName(letter)}: <b>${topVal[0]}</b> (${topVal[1]}/${values.length})</span>`;
-                    }
-                });
-                profile += '</div>';
-            }
-            communityProfile.innerHTML = profile;
-            communityProfile.classList.remove('hidden');
-            try { lucide.createIcons(); } catch (e) {}
+            nodes.forEach(n => { n.community = `Community ${uniqueLabels.indexOf(labels[n.id]) + 1}`; });
         }
 
         // --- TAB 1: Stat Logic ---
@@ -1924,7 +1393,6 @@
                 if(targetId === 'tab-network' && AppState.processedData.nodes.length > 0) initNetworkGraph();
                 if(targetId === 'tab-matrix' && AppState.processedData.nodes.length > 0) buildCorrelationMatrix();
                 if(targetId === 'tab-locations') renderLocationsTab();
-                if(targetId === 'tab-birthyear' && AppState.processedData.nodes.length > 0) renderBirthYearTab();
             });
         });
 
@@ -1964,66 +1432,11 @@
         // --- TAB 2: Network D3 ---
         const selSizeBy = document.getElementById('net-size-by');
         const selColorBy = document.getElementById('net-color-by');
-        const communityCountSlider = document.getElementById('community-count-slider');
-        const communitySelector = document.getElementById('community-selector');
-        const btnRecalcCommunities = document.getElementById('btn-recalc-communities');
-        const communityProfile = document.getElementById('community-profile');
-        const communityAttrSelector = document.getElementById('community-attr-selector');
-        const btnApplyCommunityAttr = document.getElementById('btn-apply-community-attr');
-        
         selSizeBy.addEventListener('change', initNetworkGraph);
-        selColorBy.addEventListener('change', () => {
-            // Show communities subsection only if "community" is selected
-            const communitiesSubsection = document.getElementById('communities-subsection');
-            if (selColorBy.value === 'community') {
-                communitiesSubsection.classList.remove('hidden');
-            } else {
-                communitiesSubsection.classList.add('hidden');
-            }
-            initNetworkGraph();
-        });
-        
-        // Initialize: עדיף communities sub-section כשהדף טוען
-        document.addEventListener('DOMContentLoaded', () => {
-            const communitiesSubsection = document.getElementById('communities-subsection');
-            if (selColorBy.value === 'community' && communitiesSubsection) {
-                communitiesSubsection.classList.remove('hidden');
-            }
-        });
-        
-        btnRecalcCommunities.addEventListener('click', () => {
-            if (AppState.processedData.nodes.length === 0) return;
-            const numCommunities = parseInt(communityCountSlider.value) || 5;
-            // I: עדכון הקהילות עם K חדש, לא השרטוט שוב
-            recalculateCommunitiesWithK(AppState.processedData.nodes, AppState.adjList, numCommunities);
-            updateCommunitySelector();
-            // רק אם צבע קהילות נבחר, צייר רשת חדשה (כדי לראות צבעים חדשים)
-            if (selColorBy.value === 'community') {
-                initNetworkGraph();
-            }
-        });
-        
-        communitySelector.addEventListener('change', (e) => {
-            const communityId = e.target.value;
-            if (!communityId) {
-                communityProfile.classList.add('hidden');
-                return;
-            }
-            displayCommunityProfile(communityId);
-        });
-        
-        btnApplyCommunityAttr.addEventListener('click', () => {
-            if (AppState.processedData.nodes.length === 0) return;
-            const selectedAttr = communityAttrSelector.value;
-            if (!selectedAttr) return;
-            // I: החלף צביעה - כל community יצייר בצבע בהתאם ל-attribute שנבחר
-            AppState.communityColorByAttr = selectedAttr;
-            initNetworkGraph();
-        });
+        selColorBy.addEventListener('change', initNetworkGraph);
 
         function initNetworkGraph() {
             if (AppState.processedData.nodes.length === 0) return;
-            communityProfile.classList.add('hidden');
             const container = document.getElementById('network-container');
             container.innerHTML = ''; 
             
@@ -2031,24 +1444,12 @@
             const height = Math.max(300, container.clientHeight || 500);
 
             const sizeAttr = selSizeBy.value; 
-            // I: אם בחרנו attribute צביעה עם קהילות, השתמש בו. אחרת, השתמש בselColorBy
-            let colorAttr = selColorBy.value;
-            if (colorAttr === 'community' && AppState.communityColorByAttr) {
-                colorAttr = AppState.communityColorByAttr;
-            }
+            const colorAttr = selColorBy.value; 
 
             const nodes = AppState.processedData.nodes.map(d => Object.create(d));
             const links = AppState.processedData.links.map(d => Object.create(d));
 
-            // I: אם colorAttr הוא column key (__COL_X), קבל מ-rawRow, אחרת קבל מ-node properties
-            const getColorValue = (node, attr) => {
-                if (attr.startsWith('__COL_')) {
-                    return String(node.rawRow && node.rawRow[attr] ? node.rawRow[attr] : 'Unknown').trim();
-                }
-                return String(node[attr] || 'Unknown').trim();
-            };
-
-            const uniqueColors = [...new Set(nodes.map(d => getColorValue(d, colorAttr)))].sort();
+            const uniqueColors = [...new Set(nodes.map(d => String(d[colorAttr] || 'Unknown')))].sort();
             const colorMap = d3.scaleOrdinal(d3.schemeCategory10).domain(uniqueColors);
             
             document.getElementById('network-legend').innerHTML = uniqueColors.map(val => `
@@ -2069,8 +1470,7 @@
                 .force("center", d3.forceCenter(width / 2, height / 2))
                 .force("collide", d3.forceCollide().radius(d => getRadius(d) + 4));
 
-            const link = g.append("g").selectAll("line").data(links).join("line")
-                .attr("class", d => d.type === 'external' ? 'link link-external' : 'link');
+            const link = g.append("g").selectAll("line").data(links).join("line").attr("class", "link");
 
             const node = g.append("g").selectAll("path").data(nodes).join("path")
                 .attr("class", "node")
@@ -2079,7 +1479,7 @@
                     const symbolType = d.type === 'external' ? d3.symbolSquare : d3.symbolCircle;
                     return d3.symbol().type(symbolType).size(Math.PI * r * r)();
                 })
-                .attr("fill", d => colorMap(getColorValue(d, colorAttr)))
+                .attr("fill", d => colorMap(String(d[colorAttr] || 'Unknown')))
                 .call(d3.drag()
                     .on("start", e => { if (!e.active) simulation.alphaTarget(0.3).restart(); e.subject.fx = e.subject.x; e.subject.fy = e.subject.y; })
                     .on("drag", e => { e.subject.fx = e.x; e.subject.fy = e.y; })
@@ -2291,15 +1691,15 @@
             const innerWidth = Math.max(10, width - margin.left - margin.right);
             const innerHeight = Math.max(10, height - margin.top - margin.bottom);
 
-            const featureLetters = [
-                ...DashboardColumns.causeRequired,
-                ...DashboardColumns.causeOptional,
-                ...DashboardColumns.result
+            const features = [
+                {key: 'Gender', label: t('opt_gender')},
+                {key: 'education - low / mid / high', label: t('opt_edu')},
+                {key: 'former political affiliation', label: t('opt_affil')},
+                {key: 'Category', label: t('opt_cat')},
+                {key: 'Aryan side', label: t('opt_aryan')},
+                {key: 'ŻOB', label: t('opt_zob')},
+                {key: 'GL', label: t('opt_gl')}
             ];
-            const features = featureLetters.map(letter => ({
-                key: getColumnKey(letter),
-                label: getColumnDisplayName(letter)
-            }));
 
             let matrixData = [];
             let correlationsList = [];
@@ -2374,408 +1774,6 @@
                 </div>
             `).join('');
         }
-
-        // --- TAB 6: Birth Year Analysis ---
-        function getNodeBirthYear(node) {
-            if (!node || !node.rawRow) return null;
-            const schema = buildDetectedSchema();
-            const byRaw = getCellByLetter(node.rawRow, schema.birthYear, '');
-            if (byRaw) {
-                const num = parseInt(String(byRaw).replace(/[^\d]/g, ''));
-                if (num > 1850 && num < 1945) return num;
-            }
-            const ageRaw = String(node.age || '').trim();
-            if (ageRaw) {
-                const age = parseInt(ageRaw.replace(/[^\d]/g, ''));
-                if (age > 0 && age < 100) return 1943 - age;
-            }
-            return null;
-        }
-
-        function binBirthYear(year, interval) {
-            if (year == null) return AppState.lang === 'he' ? 'לא ידוע' : 'Unknown';
-            const base = Math.floor(year / interval) * interval;
-            return interval === 1 ? String(base) : base + '–' + (base + interval - 1);
-        }
-
-        function renderBirthYearTab() {
-            if (AppState.processedData.tableData.length === 0) return;
-            calcBirthYearCorrelations();
-            initBirthYearNetwork();
-        }
-
-        function calcBirthYearCorrelations() {
-            const data = AppState.processedData.tableData;
-            if (data.length === 0) return;
-            const interval = parseInt(document.getElementById('by-corr-interval').value) || 5;
-            const allCauseLetters = [...DashboardColumns.causeRequired, ...DashboardColumns.causeOptional];
-            const binned = data.map(d => ({
-                node: d,
-                byBin: binBirthYear(getNodeBirthYear(d), interval)
-            }));
-
-            const results = [];
-            allCauseLetters.forEach(letter => {
-                const crossTab = {};
-                let total = 0;
-                binned.forEach(({ node, byBin }) => {
-                    const fieldVal = String(getCellByLetter(node.rawRow, letter, '') || '').trim() || 'Unknown';
-                    if (!crossTab[byBin]) crossTab[byBin] = {};
-                    crossTab[byBin][fieldVal] = (crossTab[byBin][fieldVal] || 0) + 1;
-                    total++;
-                });
-                const xLabels = Object.keys(crossTab);
-                const yLabels = [...new Set(xLabels.flatMap(x => Object.keys(crossTab[x])))];
-                const v = computeCramersV(xLabels, yLabels, crossTab, total);
-                results.push({ letter, label: getColumnDisplayName(letter), score: v, crossTab, xLabels, yLabels });
-            });
-
-            results.sort((a, b) => b.score - a.score);
-            const list = document.getElementById('by-corr-list');
-            list.innerHTML = results.map((r, idx) =>
-                `<li class="cursor-pointer hover:bg-amber-50 rounded p-2 transition" data-corr-idx="${idx}">
-                    <div class="flex justify-between text-xs mb-1">
-                        <span class="font-medium">${r.label}</span>
-                        <span class="font-bold text-amber-700">${r.score.toFixed(3)}</span>
-                    </div>
-                    <div class="w-full bg-amber-200/50 rounded-full h-2">
-                        <div class="bg-amber-600 h-2 rounded-full" style="width: ${Math.min(r.score * 100, 100)}%"></div>
-                    </div>
-                </li>`
-            ).join('');
-            document.getElementById('by-corr-results').classList.remove('hidden');
-            document.getElementById('by-corr-drilldown').classList.add('hidden');
-            AppState._byCorrelations = results;
-            AppState._byBinned = binned;
-            AppState._byInterval = interval;
-            list.querySelectorAll('li[data-corr-idx]').forEach(li => {
-                li.addEventListener('click', () => showBirthYearDrilldown(parseInt(li.dataset.corrIdx)));
-            });
-        }
-
-        function showBirthYearDrilldown(idx) {
-            const result = AppState._byCorrelations[idx];
-            if (!result) return;
-            const interval = AppState._byInterval;
-            const drilldown = document.getElementById('by-corr-drilldown');
-            const title = document.getElementById('by-corr-drilldown-title');
-            const body = document.getElementById('by-corr-drilldown-body');
-
-            const byLabel = AppState.lang === 'he' ? 'שנת לידה' : 'Birth Year';
-            title.innerText = `${result.label} × ${byLabel} (${interval} ${AppState.lang === 'he' ? 'שנים' : 'yrs'})`;
-
-            const byBins = [...result.xLabels].sort();
-            const fieldVals = [...result.yLabels].sort();
-            let html = `<table class="w-full text-xs border-collapse" dir="ltr"><thead><tr>`;
-            html += `<th class="border border-slate-300 px-2 py-1 bg-slate-100 text-start">${byLabel}</th>`;
-            fieldVals.forEach(fv => { html += `<th class="border border-slate-300 px-2 py-1 bg-slate-100 text-center">${fv}</th>`; });
-            html += `</tr></thead><tbody>`;
-            byBins.forEach(bin => {
-                html += `<tr><td class="border border-slate-300 px-2 py-1 font-bold bg-amber-50">${bin}</td>`;
-                fieldVals.forEach(fv => {
-                    const count = (result.crossTab[bin] && result.crossTab[bin][fv]) || 0;
-                    html += count > 0
-                        ? `<td class="border border-slate-300 px-2 py-1 text-center"><button class="text-blue-600 hover:underline font-bold by-drill-cell" data-bin="${bin}" data-field="${result.letter}" data-fval="${fv}">${count}</button></td>`
-                        : `<td class="border border-slate-300 px-2 py-1 text-center text-slate-300">0</td>`;
-                });
-                html += `</tr>`;
-            });
-            html += `</tbody></table>`;
-            body.innerHTML = html;
-            drilldown.classList.remove('hidden');
-            body.querySelectorAll('.by-drill-cell').forEach(btn => {
-                btn.addEventListener('click', e => {
-                    e.stopPropagation();
-                    showBirthYearPeople(btn.dataset.bin, btn.dataset.field, btn.dataset.fval);
-                });
-            });
-        }
-
-        function showBirthYearPeople(bin, letter, fval) {
-            const interval = AppState._byInterval;
-            const data = AppState.processedData.tableData;
-            const matching = data.filter(d => {
-                const byBin = binBirthYear(getNodeBirthYear(d), interval);
-                const fieldVal = String(getCellByLetter(d.rawRow, letter, '') || '').trim() || 'Unknown';
-                return byBin === bin && fieldVal === fval;
-            });
-            if (matching.length === 0) return;
-
-            const body = document.getElementById('by-corr-drilldown-body');
-            const old = body.querySelector('.by-person-list-container');
-            if (old) old.remove();
-
-            let html = `<div class="by-person-list-container mt-2 p-2 bg-white rounded border border-blue-200">
-                <h5 class="text-xs font-bold text-blue-800 mb-1">${AppState.lang === 'he' ? 'דמויות' : 'People'} (${matching.length}):</h5>
-                <div class="flex flex-wrap gap-1">`;
-            matching.forEach(d => {
-                html += `<button class="text-xs bg-blue-100 hover:bg-blue-200 text-blue-800 px-2 py-1 rounded transition by-person-btn" data-node-id="${d.id}">${d.name}</button>`;
-            });
-            html += `</div></div>`;
-            body.insertAdjacentHTML('beforeend', html);
-
-            body.querySelectorAll('.by-person-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const node = AppState.nodesMap.get(btn.dataset.nodeId);
-                    if (node) showPersonDetailsModal(node);
-                });
-            });
-        }
-
-        function initBirthYearNetwork() {
-            if (AppState.processedData.nodes.length === 0) return;
-            const container = document.getElementById('by-network-container');
-            if (!container) return;
-            container.innerHTML = '';
-
-            const width = Math.max(300, container.clientWidth || 800);
-            const height = Math.max(300, container.clientHeight || 500);
-            const interval = parseInt(document.getElementById('by-net-interval').value) || 5;
-
-            // Use communities already computed by the same Label Propagation as Tab 2
-            const nodes = AppState.processedData.nodes.map(d => {
-                const c = Object.create(d);
-                c.birthYear = getNodeBirthYear(d);
-                c.byBin = binBirthYear(c.birthYear, interval);
-                // community is already on d from recalculateCommunitiesWithK
-                return c;
-            });
-            const links = AppState.processedData.links.map(d => Object.create(d));
-
-            const communities = [...new Set(nodes.map(n => n.community))].sort();
-            const communityColor = d3.scaleOrdinal(d3.schemeCategory10).domain(communities);
-
-            const byBins = [...new Set(nodes.map(n => n.byBin))].sort();
-            const byColor = d3.scaleOrdinal(d3.schemeTableau10).domain(byBins);
-
-            // Populate community selector dropdown
-            const commSelector = document.getElementById('by-net-community-selector');
-            if (commSelector) {
-                commSelector.innerHTML = '<option value="">' + (AppState.lang === 'he' ? 'לחץ על קהילה לפרטים...' : 'Select community...') + '</option>'
-                    + communities.map(c => `<option value="${c}">${c} (${nodes.filter(n => n.community === c).length})</option>`).join('');
-            }
-
-            // Sync K input with Tab 2 value
-            const kInput = document.getElementById('by-net-community-k');
-            const tab2K = document.getElementById('community-count-slider');
-            if (kInput && tab2K) kInput.value = tab2K.value;
-
-            document.getElementById('by-net-legend-fill').innerHTML = byBins.map(bin =>
-                `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px]" style="background:${byColor(bin)}30;border:1px solid ${byColor(bin)}">
-                    <span class="w-2 h-2 rounded-sm" style="background:${byColor(bin)}"></span>${bin}</span>`
-            ).join('');
-            document.getElementById('by-net-legend-stroke').innerHTML = communities.map(c =>
-                `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] cursor-pointer hover:bg-rose-100 transition" data-community-id="${c}">
-                    <span class="w-2.5 h-2.5 rounded-full" style="border:2.5px solid ${communityColor(c)};background:transparent"></span>${c} (${nodes.filter(n => n.community === c).length})</span>`
-            ).join('');
-
-            // Click on community legend to show profile
-            document.getElementById('by-net-legend-stroke').querySelectorAll('[data-community-id]').forEach(el => {
-                el.addEventListener('click', () => showTab6CommunityProfile(el.dataset.communityId));
-            });
-
-            const svg = d3.select('#by-network-container').append('svg').attr('width', width).attr('height', height)
-                .call(d3.zoom().on('zoom', e => g.attr('transform', e.transform)));
-            const g = svg.append('g');
-            const tooltip = d3.select('#tooltip');
-
-            const simulation = d3.forceSimulation(nodes)
-                .force('link', d3.forceLink(links).id(d => d.id).distance(40))
-                .force('charge', d3.forceManyBody().strength(-80))
-                .force('center', d3.forceCenter(width / 2, height / 2))
-                .force('collide', d3.forceCollide().radius(d => Math.max(5, Math.min(14, d.degree + 2)) + 3));
-
-            const link = g.append('g').selectAll('line').data(links).join('line')
-                .attr('class', d => d.type === 'external' ? 'link link-external' : 'link');
-
-            const node = g.append('g').selectAll('circle').data(nodes).join('circle')
-                .attr('class', 'node')
-                .attr('r', d => Math.max(5, Math.min(14, d.degree + 2)))
-                .attr('fill', d => byColor(d.byBin))
-                .style('stroke', d => communityColor(d.community))
-                .style('stroke-width', '3px')
-                .call(d3.drag()
-                    .on('start', e => { if (!e.active) simulation.alphaTarget(0.3).restart(); e.subject.fx = e.subject.x; e.subject.fy = e.subject.y; })
-                    .on('drag', e => { e.subject.fx = e.x; e.subject.fy = e.y; })
-                    .on('end', e => { if (!e.active) simulation.alphaTarget(0); e.subject.fx = null; e.subject.fy = null; })
-                )
-                .on('mouseover', (event, d) => {
-                    tooltip.transition().duration(200).style('opacity', 1);
-                    const lbl = AppState.lang === 'he'
-                        ? { by: 'שנת לידה', grp: 'קבוצת לידה', com: 'קהילה' }
-                        : { by: 'Birth Year', grp: 'Birth Group', com: 'Community' };
-                    tooltip.html(
-                        `<div class="font-bold border-b border-slate-200 pb-2 mb-2">${d.name} <span class="text-slate-400 text-[10px]">(ID: ${d.id})</span></div>
-                        <div class="text-xs space-y-1">
-                            <div><b>${lbl.by}:</b> ${d.birthYear || (AppState.lang === 'he' ? 'לא ידוע' : 'Unknown')}</div>
-                            <div><b>${lbl.grp}:</b> ${d.byBin}</div>
-                            <div><b>${lbl.com}:</b> <span style="color:${communityColor(d.community)};font-weight:bold">${d.community}</span></div>
-                            <div><b>Degree:</b> ${d.degree}</div>
-                        </div>`
-                    ).style('left', (event.pageX + 15) + 'px').style('top', (event.pageY - 15) + 'px');
-                })
-                .on('mouseout', () => tooltip.transition().duration(500).style('opacity', 0))
-                .on('click', (event, d) => {
-                    event.stopPropagation();
-                    if (d.type === 'protagonist') showPersonDetailsModal(d);
-                });
-
-            simulation.on('tick', () => {
-                link.attr('x1', d => d.source.x).attr('y1', d => d.source.y).attr('x2', d => d.target.x).attr('y2', d => d.target.y);
-                node.attr('cx', d => d.x).attr('cy', d => d.y);
-            });
-        }
-
-        function showTab6CommunityProfile(communityId) {
-            if (!communityId) return;
-            const profileDiv = document.getElementById('by-net-community-profile');
-            const bodyDiv = document.getElementById('by-net-community-profile-body');
-            if (!profileDiv || !bodyDiv) return;
-
-            const members = AppState.processedData.nodes.filter(n => n.community === communityId);
-            if (members.length === 0) {
-                bodyDiv.innerHTML = '<p>' + (AppState.lang === 'he' ? 'אין נתונים בקהילה זו' : 'No data in this community') + '</p>';
-                profileDiv.classList.remove('hidden');
-                return;
-            }
-
-            let html = `<div class="font-bold mb-1"><i data-lucide="users" class="w-3 h-3 inline"></i> ${communityId} — ${members.length} ${AppState.lang === 'he' ? 'אנשים' : 'people'}</div>`;
-            html += `<div class="mb-2"><b>${AppState.lang === 'he' ? 'שמות:' : 'Names:'}</b> `;
-            html += members.map(n =>
-                `<button class="text-blue-600 hover:underline by-t6-person-btn" data-node-id="${n.id}">${n.name}</button>`
-            ).join(', ');
-            html += '</div>';
-
-            // Birth year distribution within community
-            const byDist = {};
-            members.forEach(n => {
-                const yr = getNodeBirthYear(n);
-                const label = yr ? String(yr) : (AppState.lang === 'he' ? 'לא ידוע' : 'Unknown');
-                byDist[label] = (byDist[label] || 0) + 1;
-            });
-            html += `<div class="border-t pt-1 mt-1"><b>${AppState.lang === 'he' ? 'שנות לידה:' : 'Birth years:'}</b><br>`;
-            Object.entries(byDist).sort((a, b) => a[0].localeCompare(b[0])).forEach(([yr, cnt]) => {
-                html += `<span class="inline-block mr-2">${yr}: <b>${cnt}</b></span>`;
-            });
-            html += '</div>';
-
-            // Cause/background attributes summary
-            const allCauseLetters = [...DashboardColumns.causeRequired, ...DashboardColumns.causeOptional];
-            if (allCauseLetters.length > 0) {
-                html += '<div class="border-t pt-1 mt-1"><b>' + (AppState.lang === 'he' ? 'תכונות רקע:' : 'Background:') + '</b><br>';
-                allCauseLetters.forEach(letter => {
-                    const values = members.map(n => String(getCellByLetter(n.rawRow, letter, '') || '').trim()).filter(v => v);
-                    if (values.length > 0) {
-                        const freqMap = {};
-                        values.forEach(v => freqMap[v] = (freqMap[v] || 0) + 1);
-                        const topVal = Object.entries(freqMap).sort((a, b) => b[1] - a[1])[0];
-                        html += `<span class="block">• ${getColumnDisplayName(letter)}: <b>${topVal[0]}</b> (${topVal[1]}/${values.length})</span>`;
-                    }
-                });
-                html += '</div>';
-            }
-
-            // Result attributes summary
-            const resultLetters = DashboardColumns.result;
-            if (resultLetters.length > 0) {
-                html += '<div class="border-t pt-1 mt-1"><b>' + (AppState.lang === 'he' ? 'תכונות תוצאה:' : 'Outcome:') + '</b><br>';
-                resultLetters.forEach(letter => {
-                    const values = members.map(n => String(getCellByLetter(n.rawRow, letter, '') || '').trim()).filter(v => v);
-                    if (values.length > 0) {
-                        const freqMap = {};
-                        values.forEach(v => freqMap[v] = (freqMap[v] || 0) + 1);
-                        const topVal = Object.entries(freqMap).sort((a, b) => b[1] - a[1])[0];
-                        html += `<span class="block">• ${getColumnDisplayName(letter)}: <b>${topVal[0]}</b> (${topVal[1]}/${values.length})</span>`;
-                    }
-                });
-                html += '</div>';
-            }
-
-            bodyDiv.innerHTML = html;
-            profileDiv.classList.remove('hidden');
-            try { lucide.createIcons(); } catch (e) {}
-
-            // Person click handlers
-            bodyDiv.querySelectorAll('.by-t6-person-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const node = AppState.nodesMap.get(btn.dataset.nodeId);
-                    if (node) showPersonDetailsModal(node);
-                });
-            });
-        }
-
-        // Tab 6 Event Listeners
-        (function() {
-            const corrSlider = document.getElementById('by-corr-interval');
-            const corrDisp = document.getElementById('by-corr-interval-display');
-            const netSlider = document.getElementById('by-net-interval');
-            const netDisp = document.getElementById('by-net-interval-display');
-            const btnCalc = document.getElementById('btn-calc-by-corr');
-            const drillClose = document.getElementById('by-corr-drilldown-close');
-            if (corrSlider && corrDisp) {
-                corrSlider.addEventListener('input', () => {
-                    corrDisp.innerText = corrSlider.value + (AppState.lang === 'he' ? ' שנים' : ' years');
-                });
-            }
-            if (netSlider && netDisp) {
-                netSlider.addEventListener('input', () => {
-                    netDisp.innerText = netSlider.value + (AppState.lang === 'he' ? ' שנים' : ' years');
-                });
-                netSlider.addEventListener('change', () => {
-                    if (AppState.processedData.nodes.length > 0) initBirthYearNetwork();
-                });
-            }
-            if (btnCalc) {
-                btnCalc.addEventListener('click', () => {
-                    if (AppState.processedData.tableData.length === 0) return alert(t('js_no_data'));
-                    calcBirthYearCorrelations();
-                });
-            }
-            if (drillClose) {
-                drillClose.addEventListener('click', () => {
-                    document.getElementById('by-corr-drilldown').classList.add('hidden');
-                });
-            }
-
-            // Community K recalculation - uses same Label Propagation as Tab 2
-            const btnRecalcT6 = document.getElementById('btn-by-net-recalc-communities');
-            if (btnRecalcT6) {
-                btnRecalcT6.addEventListener('click', () => {
-                    if (AppState.processedData.nodes.length === 0) return;
-                    const k = parseInt(document.getElementById('by-net-community-k').value) || 5;
-                    recalculateCommunitiesWithK(AppState.processedData.nodes, AppState.adjList, k);
-                    // Sync Tab 2 community count and selector
-                    const tab2K = document.getElementById('community-count-slider');
-                    if (tab2K) tab2K.value = k;
-                    try { updateCommunitySelector(); } catch (e) {}
-                    initBirthYearNetwork();
-                });
-            }
-
-            // Community selector dropdown
-            const commSel = document.getElementById('by-net-community-selector');
-            if (commSel) {
-                commSel.addEventListener('change', (e) => {
-                    const cid = e.target.value;
-                    if (!cid) {
-                        document.getElementById('by-net-community-profile').classList.add('hidden');
-                        return;
-                    }
-                    showTab6CommunityProfile(cid);
-                });
-            }
-
-            // Community profile close button
-            const profClose = document.getElementById('by-net-community-profile-close');
-            if (profClose) {
-                profClose.addEventListener('click', () => {
-                    document.getElementById('by-net-community-profile').classList.add('hidden');
-                });
-            }
-        })();
-
-        // Initialize UI controls even before loading data.
-        populateColumnDrivenControls();
     </script>
 </body>
 </html>
