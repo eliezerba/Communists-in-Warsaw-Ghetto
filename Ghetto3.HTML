@@ -394,6 +394,13 @@
                 <div class="grid grid-cols-1 lg:grid-cols-5 gap-4 flex-1 min-h-0">
                     <div class="lg:col-span-3 bg-white rounded-lg border border-slate-200 shadow-sm p-3 flex flex-col min-h-[300px]">
                         <h3 class="text-sm font-semibold text-slate-700 mb-2" data-i18n="locations_map_title">מפה</h3>
+                        <div class="mb-2 flex flex-wrap items-center gap-3">
+                            <label class="inline-flex items-center gap-2 text-xs text-slate-700 cursor-pointer select-none">
+                                <input id="locations-historical-toggle" type="checkbox" class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
+                                <span data-i18n="locations_toggle_label">הפעל מפה היסטורית (שנות ה-40)</span>
+                            </label>
+                            <span id="locations-map-mode-text" class="text-[11px] px-2 py-0.5 rounded bg-slate-100 text-slate-600" data-i18n="locations_mode_modern">מפה מודרנית פעילה</span>
+                        </div>
                         <div id="locations-map" class="w-full h-full rounded border border-slate-200 bg-slate-50"></div>
                     </div>
 
@@ -549,6 +556,9 @@
                 locations_title: "מיקומים מתוך גיליון Locations",
                 locations_desc: "מוצגים רק מקומות שעברו סטנדרטיזציה (עמודה C) ויש להם קו רוחב/אורך (עמודות H,I).",
                 locations_map_title: "מפה",
+                locations_toggle_label: "הפעל מפה היסטורית (שנות ה-40)",
+                locations_mode_modern: "מפה מודרנית פעילה",
+                locations_mode_historical: "מפה היסטורית פעילה",
                 locations_table_title: "טבלת מיקומים",
                 locations_col_place: "שם מקום (A)",
                 locations_col_std: "מיקום סטנדרטי (C)",
@@ -680,6 +690,9 @@
                 locations_title: "Locations From The Locations Sheet",
                 locations_desc: "Only standardized locations are shown (column C) with valid latitude/longitude (columns H,I).",
                 locations_map_title: "Map",
+                locations_toggle_label: "Enable historical map (1940s)",
+                locations_mode_modern: "Modern map active",
+                locations_mode_historical: "Historical map active",
                 locations_table_title: "Locations Table",
                 locations_col_place: "Place Name (A)",
                 locations_col_std: "Standardized Location (C)",
@@ -817,6 +830,11 @@
             networkSimulation: null,
             locationsMap: null,
             locationsLayer: null,
+            locationsMapMode: 'modern',
+            modernBaseLayer: null,
+            historicalOrthophotoLayer: null,
+            historicalStreetsLayer: null,
+            historicalBoundariesLayer: null,
             communityColorByAttr: null  // I: לשמור דרך צביעה עם קהילות
         };
 
@@ -825,6 +843,11 @@
             causeOptional: ['G'],
             result: ['AB', 'AC', 'AD', 'AE', 'AF', 'AG', 'AH', 'AI', 'AJ']
         };
+
+        const WARSAW_WMS_URL = 'https://wms.um.warszawa.pl/serwis';
+        const WARSAW_BOUNDS = L.latLngBounds([52.08, 20.85], [52.37, 21.30]);
+        const HISTORICAL_ORTHOPHOTO_CANDIDATES = ['ORTOFOTOMAPA_1945', 'ORTOFOTOMAPA_1935', 'Zdjecia_lotnicze_1935'];
+        const HISTORICAL_STREETS_CANDIDATES = ['Historyczne_dane_adresowe'];
 
         function columnIndexToLetter(index) {
             let n = index + 1;
@@ -2136,10 +2159,189 @@
             `).join('');
         }
 
+        function updateLocationsMapModeLabel() {
+            const modeEl = document.getElementById('locations-map-mode-text');
+            if (!modeEl) return;
+            const key = AppState.locationsMapMode === 'historical' ? 'locations_mode_historical' : 'locations_mode_modern';
+            modeEl.textContent = t(key);
+        }
+
+        function probeWmsLayer(layerName) {
+            const params = new URLSearchParams({
+                SERVICE: 'WMS',
+                REQUEST: 'GetMap',
+                VERSION: '1.1.1',
+                SRS: 'EPSG:4326',
+                BBOX: '20.85,52.08,21.30,52.37',
+                WIDTH: '256',
+                HEIGHT: '256',
+                LAYERS: layerName,
+                STYLES: '',
+                FORMAT: 'image/png',
+                TRANSPARENT: 'TRUE'
+            });
+
+            const testUrl = `${WARSAW_WMS_URL}?${params.toString()}&_ts=${Date.now()}`;
+            return new Promise(resolve => {
+                const img = new Image();
+                const timeoutId = setTimeout(() => resolve(false), 6000);
+
+                img.onload = () => {
+                    clearTimeout(timeoutId);
+                    resolve(true);
+                };
+
+                img.onerror = () => {
+                    clearTimeout(timeoutId);
+                    resolve(false);
+                };
+
+                img.src = testUrl;
+            });
+        }
+
+        async function resolveFirstWorkingWmsLayer(candidates) {
+            for (const candidate of candidates) {
+                const ok = await probeWmsLayer(candidate);
+                if (ok) return candidate;
+            }
+            return null;
+        }
+
+        async function ensureHistoricalLayersInitialized() {
+            if (AppState.historicalOrthophotoLayer || AppState.historicalStreetsLayer) return;
+
+            const [orthophotoLayerName, streetsLayerName] = await Promise.all([
+                resolveFirstWorkingWmsLayer(HISTORICAL_ORTHOPHOTO_CANDIDATES),
+                resolveFirstWorkingWmsLayer(HISTORICAL_STREETS_CANDIDATES)
+            ]);
+
+            if (orthophotoLayerName) {
+                AppState.historicalOrthophotoLayer = L.tileLayer.wms(WARSAW_WMS_URL, {
+                    layers: orthophotoLayerName,
+                    format: 'image/png',
+                    transparent: false,
+                    version: '1.1.1',
+                    attribution: 'm.st. Warszawa WMS'
+                });
+            }
+
+            if (streetsLayerName) {
+                AppState.historicalStreetsLayer = L.tileLayer.wms(WARSAW_WMS_URL, {
+                    layers: streetsLayerName,
+                    format: 'image/png',
+                    transparent: true,
+                    version: '1.1.1',
+                    attribution: 'm.st. Warszawa WMS'
+                });
+            }
+        }
+
+        async function loadHistoricalBoundaries() {
+            if (AppState.historicalBoundariesLayer || typeof L === 'undefined') {
+                return AppState.historicalBoundariesLayer;
+            }
+
+            try {
+                const response = await fetch('ghetto_boundaries.geojson', { cache: 'no-store' });
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const geojson = await response.json();
+                AppState.historicalBoundariesLayer = L.geoJSON(geojson, {
+                    pane: 'locationsBoundariesPane',
+                    style: {
+                        color: '#dc2626',
+                        weight: 2,
+                        fillColor: '#dc2626',
+                        fillOpacity: 0.08
+                    }
+                });
+                return AppState.historicalBoundariesLayer;
+            } catch (error) {
+                console.warn('Historical boundaries were not loaded. Add ghetto_boundaries.geojson to enable this overlay.', error);
+                return null;
+            }
+        }
+
+        async function setLocationsMapMode(mode) {
+            if (!AppState.locationsMap) return;
+
+            AppState.locationsMapMode = mode === 'historical' ? 'historical' : 'modern';
+            const map = AppState.locationsMap;
+
+            if (AppState.locationsMapMode === 'historical') {
+                await ensureHistoricalLayersInitialized();
+                const hasHistoricalLayer = !!(AppState.historicalOrthophotoLayer || AppState.historicalStreetsLayer);
+
+                if (!hasHistoricalLayer) {
+                    console.warn('No accessible historical WMS layers found. Staying on modern basemap.');
+                    AppState.locationsMapMode = 'modern';
+                    if (AppState.modernBaseLayer && !map.hasLayer(AppState.modernBaseLayer)) {
+                        AppState.modernBaseLayer.addTo(map);
+                    }
+                    const historicalToggle = document.getElementById('locations-historical-toggle');
+                    if (historicalToggle) historicalToggle.checked = false;
+                    updateLocationsMapModeLabel();
+                    return;
+                }
+
+                if (AppState.modernBaseLayer && map.hasLayer(AppState.modernBaseLayer)) {
+                    map.removeLayer(AppState.modernBaseLayer);
+                }
+                if (AppState.historicalOrthophotoLayer && !map.hasLayer(AppState.historicalOrthophotoLayer)) {
+                    AppState.historicalOrthophotoLayer.addTo(map);
+                }
+                if (AppState.historicalStreetsLayer && !map.hasLayer(AppState.historicalStreetsLayer)) {
+                    AppState.historicalStreetsLayer.addTo(map);
+                }
+
+                map.fitBounds(WARSAW_BOUNDS, { padding: [24, 24], maxZoom: 13 });
+
+                loadHistoricalBoundaries().then(layer => {
+                    if (!layer || !AppState.locationsMap || AppState.locationsMapMode !== 'historical') return;
+                    if (!AppState.locationsMap.hasLayer(layer)) {
+                        layer.addTo(AppState.locationsMap);
+                    }
+                    if (AppState.locationsLayer) AppState.locationsLayer.bringToFront();
+                });
+            } else {
+                if (AppState.historicalOrthophotoLayer && map.hasLayer(AppState.historicalOrthophotoLayer)) {
+                    map.removeLayer(AppState.historicalOrthophotoLayer);
+                }
+                if (AppState.historicalStreetsLayer && map.hasLayer(AppState.historicalStreetsLayer)) {
+                    map.removeLayer(AppState.historicalStreetsLayer);
+                }
+                if (AppState.historicalBoundariesLayer && map.hasLayer(AppState.historicalBoundariesLayer)) {
+                    map.removeLayer(AppState.historicalBoundariesLayer);
+                }
+                if (AppState.modernBaseLayer && !map.hasLayer(AppState.modernBaseLayer)) {
+                    AppState.modernBaseLayer.addTo(map);
+                }
+            }
+
+            if (AppState.locationsLayer) AppState.locationsLayer.bringToFront();
+            updateLocationsMapModeLabel();
+        }
+
         function renderLocationsTab() {
             const tbody = document.getElementById('locations-table-body');
             const mapContainer = document.getElementById('locations-map');
+            const historicalToggle = document.getElementById('locations-historical-toggle');
             if (!tbody || !mapContainer) return;
+
+            if (historicalToggle) {
+                historicalToggle.checked = AppState.locationsMapMode === 'historical';
+                if (historicalToggle.dataset.bound !== '1') {
+                    historicalToggle.addEventListener('change', (event) => {
+                        const nextMode = event.target.checked ? 'historical' : 'modern';
+                        setLocationsMapMode(nextMode);
+                    });
+                    historicalToggle.dataset.bound = '1';
+                }
+            }
+            updateLocationsMapModeLabel();
 
             const locations = Array.isArray(AppState.locationsData) ? AppState.locationsData : [];
 
@@ -2164,10 +2366,18 @@
 
             if (!AppState.locationsMap) {
                 AppState.locationsMap = L.map('locations-map', { zoomControl: true }).setView([52.2297, 21.0122], 5);
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+
+                AppState.locationsMap.createPane('locationsBoundariesPane');
+                AppState.locationsMap.getPane('locationsBoundariesPane').style.zIndex = 500;
+                AppState.locationsMap.createPane('locationsPointsPane');
+                AppState.locationsMap.getPane('locationsPointsPane').style.zIndex = 650;
+
+                AppState.modernBaseLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                     maxZoom: 18,
                     attribution: '&copy; OpenStreetMap contributors'
-                }).addTo(AppState.locationsMap);
+                });
+
+                AppState.modernBaseLayer.addTo(AppState.locationsMap);
             }
 
             if (AppState.locationsLayer) {
@@ -2179,6 +2389,7 @@
 
             locations.forEach(loc => {
                 const marker = L.circleMarker([loc.lat, loc.lon], {
+                    pane: 'locationsPointsPane',
                     radius: 6,
                     color: '#047857',
                     weight: 1,
@@ -2194,6 +2405,8 @@
                 const group = L.featureGroup(markers);
                 AppState.locationsMap.fitBounds(group.getBounds().pad(0.2));
             }
+
+            setLocationsMapMode(AppState.locationsMapMode);
 
             setTimeout(() => {
                 if (AppState.locationsMap) AppState.locationsMap.invalidateSize();
