@@ -834,6 +834,7 @@
             modernBaseLayer: null,
             historicalOrthophotoLayer: null,
             historicalStreetsLayer: null,
+            historicalFallbackLayer: null,
             historicalBoundariesLayer: null,
             communityColorByAttr: null  // I: לשמור דרך צביעה עם קהילות
         };
@@ -848,6 +849,7 @@
         const WARSAW_BOUNDS = L.latLngBounds([52.08, 20.85], [52.37, 21.30]);
         const HISTORICAL_ORTHOPHOTO_CANDIDATES = ['ORTOFOTOMAPA_1945', 'ORTOFOTOMAPA_1935', 'Zdjecia_lotnicze_1935'];
         const HISTORICAL_STREETS_CANDIDATES = ['Historyczne_dane_adresowe'];
+        const HISTORICAL_FALLBACK_TILE_URL = 'https://{s}.tile.openhistoricalmap.org/main/{z}/{x}/{y}.png';
 
         function columnIndexToLetter(index) {
             let n = index + 1;
@@ -1045,7 +1047,7 @@
             document.getElementById('lang-label').innerText = AppState.lang === 'he' ? 'English' : 'עברית';
 
             // Keep selected filename intact; only translate the default no-file label.
-            if (typeof fileInputExcel !== 'undefined' && typeof selectedFileName !== 'undefined') {
+            if (fileInputExcel && selectedFileName) {
                 const hasFile = !!(fileInputExcel.files && fileInputExcel.files.length > 0);
                 if (!hasFile) selectedFileName.innerText = t('no_file_selected');
             }
@@ -2209,7 +2211,7 @@
         }
 
         async function ensureHistoricalLayersInitialized() {
-            if (AppState.historicalOrthophotoLayer || AppState.historicalStreetsLayer) return;
+            if (AppState.historicalOrthophotoLayer || AppState.historicalStreetsLayer || AppState.historicalFallbackLayer) return;
 
             const [orthophotoLayerName, streetsLayerName] = await Promise.all([
                 resolveFirstWorkingWmsLayer(HISTORICAL_ORTHOPHOTO_CANDIDATES),
@@ -2233,6 +2235,14 @@
                     transparent: true,
                     version: '1.1.1',
                     attribution: 'm.st. Warszawa WMS'
+                });
+            }
+
+            if (!AppState.historicalOrthophotoLayer && !AppState.historicalStreetsLayer) {
+                AppState.historicalFallbackLayer = L.tileLayer(HISTORICAL_FALLBACK_TILE_URL, {
+                    subdomains: ['a', 'b', 'c'],
+                    maxZoom: 19,
+                    attribution: '&copy; OpenHistoricalMap contributors'
                 });
             }
         }
@@ -2273,7 +2283,7 @@
 
             if (AppState.locationsMapMode === 'historical') {
                 await ensureHistoricalLayersInitialized();
-                const hasHistoricalLayer = !!(AppState.historicalOrthophotoLayer || AppState.historicalStreetsLayer);
+                const hasHistoricalLayer = !!(AppState.historicalOrthophotoLayer || AppState.historicalStreetsLayer || AppState.historicalFallbackLayer);
 
                 if (!hasHistoricalLayer) {
                     console.warn('No accessible historical WMS layers found. Staying on modern basemap.');
@@ -2296,6 +2306,9 @@
                 if (AppState.historicalStreetsLayer && !map.hasLayer(AppState.historicalStreetsLayer)) {
                     AppState.historicalStreetsLayer.addTo(map);
                 }
+                if (!AppState.historicalOrthophotoLayer && !AppState.historicalStreetsLayer && AppState.historicalFallbackLayer && !map.hasLayer(AppState.historicalFallbackLayer)) {
+                    AppState.historicalFallbackLayer.addTo(map);
+                }
 
                 map.fitBounds(WARSAW_BOUNDS, { padding: [24, 24], maxZoom: 13 });
 
@@ -2304,7 +2317,11 @@
                     if (!AppState.locationsMap.hasLayer(layer)) {
                         layer.addTo(AppState.locationsMap);
                     }
-                    if (AppState.locationsLayer) AppState.locationsLayer.bringToFront();
+                    if (AppState.locationsLayer && typeof AppState.locationsLayer.eachLayer === 'function') {
+                        AppState.locationsLayer.eachLayer(pointLayer => {
+                            if (pointLayer && typeof pointLayer.bringToFront === 'function') pointLayer.bringToFront();
+                        });
+                    }
                 });
             } else {
                 if (AppState.historicalOrthophotoLayer && map.hasLayer(AppState.historicalOrthophotoLayer)) {
@@ -2316,12 +2333,19 @@
                 if (AppState.historicalBoundariesLayer && map.hasLayer(AppState.historicalBoundariesLayer)) {
                     map.removeLayer(AppState.historicalBoundariesLayer);
                 }
+                if (AppState.historicalFallbackLayer && map.hasLayer(AppState.historicalFallbackLayer)) {
+                    map.removeLayer(AppState.historicalFallbackLayer);
+                }
                 if (AppState.modernBaseLayer && !map.hasLayer(AppState.modernBaseLayer)) {
                     AppState.modernBaseLayer.addTo(map);
                 }
             }
 
-            if (AppState.locationsLayer) AppState.locationsLayer.bringToFront();
+            if (AppState.locationsLayer && typeof AppState.locationsLayer.eachLayer === 'function') {
+                AppState.locationsLayer.eachLayer(pointLayer => {
+                    if (pointLayer && typeof pointLayer.bringToFront === 'function') pointLayer.bringToFront();
+                });
+            }
             updateLocationsMapModeLabel();
         }
 
